@@ -1,0 +1,184 @@
+/* ==========================================================================
+   ДЕНЬ В МЕДИНЕ — светлая тема
+   Включается переключателем в шапке: html[data-theme="day"].
+   Ночь остаётся темой по умолчанию. Днём тёмные разделы становятся
+   песочными, текст — чернильным, золото — темнее, чтобы читалось на свету.
+   Небо — голубое с солнцем, гора Ухуд — красный гранит в дымке, дюны
+   золотые, пальмы зелёные, в каналах голубая вода. Подвал днём — закат
+   над дюнами, в оазисе зажигаются огни.
+   Заставка всегда идёт ночью, а день наступает после неё — как рассвет.
+   ========================================================================== */
+
+/* базовые стили слоёв, которые есть в разметке всегда */
+.hero__day{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity 1.8s ease;
+  background:
+    radial-gradient(70% 45% at 50% 100%,rgba(255,241,208,.95),rgba(255,241,208,0) 70%),
+    linear-gradient(180deg,#4a90cc 0%,#83bbe4 32%,#c3dff0 60%,#f5e6c6 100%)}
+.hero__sun{position:absolute;top:10%;right:11%;width:clamp(60px,7vw,104px);aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle,#fffdf4 0 34%,#fff0c0 50%,rgba(255,228,150,0) 71%);
+  box-shadow:0 0 90px 40px rgba(255,241,196,.5)}
+.hero__cloud{position:absolute;left:-30%;height:clamp(14px,1.6vw,24px);border-radius:99px;background:rgba(255,255,255,.72);
+  filter:blur(5px);animation:cloudDrift linear infinite}
+.hero__cloud--a{top:21%;width:clamp(120px,16vw,260px);animation-duration:95s;animation-delay:-30s}
+.hero__cloud--b{top:31%;width:clamp(90px,11vw,180px);opacity:.7;animation-duration:140s;animation-delay:-90s}
+@keyframes cloudDrift{to{transform:translateX(170vw)}}
+@media (max-width:899px){
+  .hero__sun{top:auto;right:11%;bottom:calc(var(--scene-h) * .52);width:56px}
+}
+
+/* видео дня и ночи на первом экране (включается в data.js → heroVideo) */
+.hero__video{position:absolute;inset:0;pointer-events:none;transition:opacity 1.2s ease}
+.hero__video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.2s ease}
+.hero__video video.is-on{opacity:1}
+.hero__video.has-video::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease;
+  background:linear-gradient(180deg,rgba(6,11,24,.55) 0%,rgba(6,11,24,.2) 45%,rgba(6,11,24,.5) 100%)}
+.hero.video-on .hero__video.has-video::after{opacity:1}
+.hero.video-on .hero__moon,.hero.video-on .hero__stars{opacity:0}
+html.is-intro .hero__video{opacity:0}
+
+/* ---------- палитра дня: переменные ---------- */
+html[data-theme="day"]{
+  --night:#f4ead8; --night-2:#efe2c8;
+  --text-l:#15203a; --muted-l:rgba(21,32,58,.68);
+  --gold:#b07d25; --gold-2:#8f6212; --water:#1f9d8f;
+}
+/* островки, которые и днём остаются тёмными: заставка, карточка приложений,
+   телефон демо, оборот карточек слов и подвал-закат */
+html[data-theme="day"] .intro,
+html[data-theme="day"] .svc__card--featured,
+html[data-theme="day"] .phone--demo,
+html[data-theme="day"] .flip__back,
+html[data-theme="day"] .footer,
+html[data-theme="day"] .mp__label{
+  --text-l:#efe9dc; --muted-l:rgba(239,233,220,.74); --gold:#e4b45e; --gold-2:#f6d592; --water:#37d6c4;
+  color:var(--text-l);
+}
+
+/* ---------- шапка, переключатель, меню ---------- */
+html[data-theme="day"] .header.is-scrolled,
+html[data-theme="day"].menu-open .header{background:rgba(250,245,236,.86);box-shadow:0 1px 0 rgba(154,111,34,.2)}
+html[data-theme="day"] .burger{border-color:rgba(21,32,58,.2);background:rgba(255,255,255,.55)}
+html[data-theme="day"] .dn{border-color:rgba(21,32,58,.18);box-shadow:inset 0 2px 5px rgba(21,32,58,.16)}
+html[data-theme="day"] .dn__day{opacity:1}
+html[data-theme="day"] .dn__stars i{opacity:0}
+html[data-theme="day"] .dn__city{fill:#b48f52}
+html[data-theme="day"] .menu{background:radial-gradient(90% 50% at 50% 110%,rgba(228,180,94,.24),transparent 70%),rgba(248,242,231,.97)}
+html[data-theme="day"] .menu__nav a{border-bottom-color:rgba(21,32,58,.1)}
+
+/* ---------- первый экран: день наступает после заставки ---------- */
+html[data-theme="day"]:not(.is-intro) .hero__day{opacity:1}
+html[data-theme="day"]:not(.is-intro) .hero__stars,
+html[data-theme="day"]:not(.is-intro) .hero__moon{opacity:0;transition:opacity 1s ease}
+html[data-theme="day"] .hero__kicker{background:rgba(255,255,255,.58);border-color:rgba(176,125,37,.35)}
+html[data-theme="day"] .hero__kicker i{border-left-color:rgba(176,125,37,.35)}
+html[data-theme="day"] .hero__title .accent{background-image:linear-gradient(100deg,#9a6612 0%,#c68d2a 28%,#e9b95c 42%,#c68d2a 52%,#9a6612 66%,#17774c 100%)}
+html[data-theme="day"] .hero__ar{color:rgba(143,98,18,.12)}
+html[data-theme="day"] .hero__lead{color:rgba(21,32,58,.78)}
+html[data-theme="day"] .btn--ghost{background:rgba(255,255,255,.55);border-color:rgba(21,32,58,.2)}
+html[data-theme="day"] .btn b{background:rgba(176,125,37,.14)}
+html[data-theme="day"] .hero__video.has-video::after{
+  background:linear-gradient(180deg,rgba(250,244,232,.62) 0%,rgba(250,244,232,.22) 45%,rgba(250,244,232,.1) 100%)}
+
+/* сцена оазиса днём: гранит Ухуда в дымке, золотые дюны, зелёные пальмы с финиками,
+   голубая вода в каналах; свет в шатре погашен */
+.scene stop{transition:stop-color 1.6s ease}
+.scene .sc-range,.scene .sc-fd,.scene .sc-fd-lee,.scene .sc-md,.scene .sc-md-lee,.scene .sc-dot,.scene .sc-trunk,.scene .sc-frond,
+.scene .sc-dates,.scene .sc-poolrim,.scene .sc-tent,.scene .sc-tentwall,.scene .sc-sadu,.scene .sc-camel,
+.scene .ch-bed,.scene .ch-glow,.scene .ch-core,.scene .ch-stub,.scene .ch-pad{transition:fill 1.6s ease,stroke 1.6s ease,opacity 1.6s ease}
+html[data-theme="day"]:not(.is-intro) .scene--hero .bp{stroke:#9a6f22}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-range{fill:#ddc5ac}
+html[data-theme="day"]:not(.is-intro) .scene--hero .gs-r0{stop-color:#c9936d}
+html[data-theme="day"]:not(.is-intro) .scene--hero .gs-r1{stop-color:#a56d4b}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-fd{fill:#f1cd8f}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-fd-lee{fill:#dcab6c}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-md{fill:#f6d59c}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-md-lee{fill:#dfab68}
+html[data-theme="day"]:not(.is-intro) .scene--hero .gs-g0{stop-color:#f3d198}
+html[data-theme="day"]:not(.is-intro) .scene--hero .gs-g1{stop-color:#e3ae6c}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-dot{fill:#7a4a1c;fill-opacity:.1}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-trunk{fill:#7c5c3b}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-rings{stroke:rgba(60,38,18,.35)}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-frond{fill:#3d7a45}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-dates{fill:#d98a2b}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-poolrim{fill:#c99e67}
+html[data-theme="day"]:not(.is-intro) .scene--hero .gs-w0{stop-color:#9be0ef}
+html[data-theme="day"]:not(.is-intro) .scene--hero .gs-w1{stop-color:#4ab6d7}
+html[data-theme="day"]:not(.is-intro) .scene--hero .gs-w2{stop-color:#2b8fbb}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-glint{stroke:#fff}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-tent{fill:#241a16}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-tentwall{fill:#3a2a21}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-rope{stroke:#5a4030}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-sadu--r{fill:#b3342b}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-sadu--w{fill:#efe3cf}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-door,
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-spill,
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-refl{opacity:0}
+html[data-theme="day"]:not(.is-intro) .scene--hero .sc-camel{fill:#6b4a2e}
+html[data-theme="day"]:not(.is-intro) .scene--hero .ch-bed{stroke:#d7a162}
+html[data-theme="day"]:not(.is-intro) .scene--hero .ch-glow{stroke:#5cc4ec;stroke-opacity:.22}
+html[data-theme="day"]:not(.is-intro) .scene--hero .ch-core,
+html[data-theme="day"]:not(.is-intro) .scene--hero .ch-stub{stroke:#2e9fd6}
+html[data-theme="day"]:not(.is-intro) .scene--hero .ch-pad{fill:#ecc182;stroke:#2e9fd6}
+html[data-theme="day"]:not(.is-intro) .scene--hero .ch-node{fill:#2e9fd6;fill-opacity:.5}
+html[data-theme="day"]:not(.is-intro) .scene--hero .ch-flow{stroke:#fff}
+
+/* ---------- боты и мини-аппы ---------- */
+html[data-theme="day"] .app-card{background:#fffdf8;border-color:rgba(42,171,238,.3);box-shadow:0 30px 60px -44px rgba(21,32,58,.4)}
+html[data-theme="day"] .apps .tags li{background:#f3eee4;border-color:transparent;color:#3d4456}
+html[data-theme="day"] .app-ph figcaption{background:#fff;border-color:rgba(21,32,58,.12)}
+
+/* ---------- услуги ---------- */
+html[data-theme="day"] .svc__card:not(.svc__card--featured){background:#fffdf8;border-color:rgba(154,111,34,.18);
+  box-shadow:0 20px 40px -32px rgba(21,32,58,.35)}
+html[data-theme="day"] .svc__ar{color:rgba(176,125,37,.85)}
+html[data-theme="day"] .svc__card:not(.svc__card--featured) .svc__pts li{background:rgba(176,125,37,.1)}
+
+/* ---------- демо ---------- */
+html[data-theme="day"] .tabs{background:rgba(21,32,58,.05);border-color:rgba(21,32,58,.1)}
+html[data-theme="day"] .demo__about li::before{color:#1f8a5b}
+html[data-theme="day"] .phone--demo{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 40px 80px -30px rgba(21,32,58,.45),0 0 0 8px rgba(176,125,37,.08)}
+
+/* ---------- подход: мираж и оазис в полуденный зной ---------- */
+html[data-theme="day"] .approach{color:var(--text-l);background:
+  radial-gradient(42% 50% at 82% 18%,rgba(31,157,143,.12),transparent 70%),
+  radial-gradient(46% 55% at 8% 92%,rgba(228,180,94,.24),transparent 70%),
+  linear-gradient(180deg,#f6ead3,#f0dbb4 55%,#f6ead3)}
+html[data-theme="day"] .approach .sec-lead{color:rgba(21,32,58,.72)}
+html[data-theme="day"] .principles li{background:rgba(255,253,248,.72);border-color:rgba(154,111,34,.2)}
+html[data-theme="day"] .principles span{color:rgba(21,32,58,.7)}
+html[data-theme="day"] .approach__touch{color:#8f6212}
+html[data-theme="day"] .mirage__phone{box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 36px 60px -26px rgba(21,32,58,.5)}
+
+/* ---------- слова ---------- */
+html[data-theme="day"] .flip__front{background:#fffdf8;border-color:rgba(154,111,34,.22);box-shadow:0 18px 36px -30px rgba(21,32,58,.35)}
+html[data-theme="day"] .words__rose{opacity:.12}
+
+/* ---------- контакты и заявка ---------- */
+html[data-theme="day"] .csteps li{background:rgba(255,253,248,.72);border-color:rgba(154,111,34,.2)}
+html[data-theme="day"] .brief{background:#fffdf8;border-color:rgba(154,111,34,.22);box-shadow:0 30px 60px -40px rgba(21,32,58,.35)}
+html[data-theme="day"] .bchip{border-color:rgba(21,32,58,.18)}
+html[data-theme="day"] .bchip[aria-pressed="true"],html[data-theme="day"] .tab.is-on{color:#fffaf0}
+html[data-theme="day"] .brief__msg{background:#e3efe4}
+html[data-theme="day"] .brief__msg-h{color:#56745b}
+html[data-theme="day"] .human{background:rgba(244,234,216,.6)}
+html[data-theme="day"] .human__opt{background:#fff;border-color:rgba(21,32,58,.14)}
+html[data-theme="day"] .human__state{color:#1f8a5b}
+html[data-theme="day"] .human__state.is-bad{color:#c0452f}
+html[data-theme="day"] .agree{border-color:rgba(21,32,58,.14);background:rgba(244,234,216,.55)}
+html[data-theme="day"] .agree.is-on{border-color:rgba(31,138,91,.45);background:rgba(47,163,111,.08)}
+html[data-theme="day"] .promo .btn--ghost{background:rgba(255,255,255,.06);border-color:rgba(239,233,220,.3);color:#efe9dc}
+
+/* ---------- подвал: закат над дюнами — в оазисе зажигаются огни ---------- */
+html[data-theme="day"] .footer{background:#2a2450}
+html[data-theme="day"] .footer__sky{background:
+  radial-gradient(1px 1px at 18% 12%,#fff 50%,transparent),radial-gradient(1px 1px at 74% 9%,#fff 50%,transparent),
+  radial-gradient(1.5px 1.5px at 46% 16%,#fff 50%,transparent),
+  radial-gradient(80% 60% at 50% 100%,rgba(255,176,96,.8),rgba(255,122,92,.28) 45%,transparent 70%),
+  linear-gradient(180deg,#1d2757 0%,#4a3c78 38%,#a95d7c 70%,#ee9f67 100%)}
+html[data-theme="day"] .footer__copy{color:rgba(255,247,236,.6)}
+
+/* во время раскрытия кругом новая тема видна сразу целиком — без медленных проявлений */
+html.theme-switching *:not(.dn *){transition:none!important}
+
+/* во время смены темы без View Transitions — хотя бы мягкая смена цветов */
+html.theme-fade,html.theme-fade *{transition:background-color .6s ease,color .6s ease,border-color .6s ease,fill .6s ease!important}

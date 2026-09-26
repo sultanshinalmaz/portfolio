@@ -1,0 +1,8 @@
+{
+  "name": "portfolio-zayavki-bot",
+  "private": true,
+  "type": "module",
+  "description": "Бот-приёмщик заявок с сайта-портфолио: проверка «не бот», одна заявка с аккаунта",
+  "scripts": { "start": "node bot.js" },
+  "engines": { "node": ">=18" }
+}
