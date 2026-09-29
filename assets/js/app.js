@@ -138,7 +138,7 @@
     try { t = document.querySelector(id); } catch (err) {}
     if (!t) return;
     e.preventDefault();
-    t.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    t.scrollIntoView({ behavior: window.reduceMotion ? 'auto' : 'smooth', block: 'start' });
   });
 
   /* ---------- день и ночь ----------
@@ -168,7 +168,7 @@
       if (themeLocked) return nudgeLocked();
       const day = !isDay();
       dnRot += 180;                                     // колесо всегда крутится вперёд
-      const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const calm = !!window.reduceMotion;
       if (!document.startViewTransition || calm) {
         root.classList.add('theme-fade');
         applyTheme(day);
@@ -203,7 +203,7 @@
   const heroEl = $('.hero'), vBox = $('#heroVideo');
   const small = window.innerWidth < 820;
   const pick = k => (small && HV[k + 'Mobile']) || HV[k] || '';
-  const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const still = !!window.reduceMotion;              // «меньше движения» — только при data.js → motion: 'respect'
   const SWAP_AT = 0.75;                         // за сколько секунд до конца перехода проявляется фон
   const THEMES = ['day', 'night'];
   let heroVisible = true, themeLocked = false;
@@ -400,7 +400,23 @@
     // страховка: если конец так и не пришёл (медленная сеть, свернули вкладку) — разблокируем
     lockT = setTimeout(() => finish(true), 30000);
     const p = v.play();
-    if (p && p.catch) p.catch(() => finish(true));   // телефон не дал запустить — сразу фон
+    if (p && p.catch) p.catch(() => {
+      // браузер не дал запустить сам (экономия трафика и т. п.) — стоит первый кадр рассвета,
+      // переключатель свободен; первое касание экрана запускает рассвет
+      if (done) return;
+      lockTheme(false);
+      const k = cur, evs = ['pointerup', 'touchend', 'keydown'];
+      const off = () => evs.forEach(t => document.removeEventListener(t, retry, true));
+      function retry() {
+        off();
+        if (cur !== k || phase !== 'intro' || done) return;
+        lockTheme(true, v);
+        lockT = setTimeout(() => finish(true), 30000);
+        const q = v.play();
+        if (q && q.catch) q.catch(() => finish(true));
+      }
+      evs.forEach(t => document.addEventListener(t, retry, true));
+    });
   }
   // ушли из темы: когда её ролик растворился — пауза, переход на начало (в следующий раз без вспышки)
   function leave(k) {
@@ -429,8 +445,14 @@
     const dawnFirst = cur === 'day' && HV.dayOnLoad !== false && !!TH.day.intro && !still;
     if (dawnFirst) {
       phase = 'intro'; played = true;             // на месте первый кадр рассвета
-      TH.day.intro.preload = 'auto';              // грузится, пока идёт заставка
-      if (TH.day.loop) TH.day.loop.preload = 'auto';
+      // рассвет грузится, пока идёт заставка, — но следом за роликом печати: на медленной сети
+      // они делили бы канал и тормозили оба. День по кругу догрузится, когда пойдёт рассвет
+      const iv = document.querySelector('#sm-intro video');
+      const load = () => { TH.day.intro.preload = 'auto'; };
+      if (iv && iv.readyState < 4) {
+        iv.addEventListener('canplaythrough', load, { once: true });
+        document.addEventListener('intro:done', load, { once: true });
+      } else load();
     }
     fitVideo();
     if ('ResizeObserver' in window) new ResizeObserver(fitVideo).observe(vBox);
@@ -580,7 +602,7 @@
      в общий ритм. Расстояние считается в пикселях для каждой картинки —
      без CSS-переменных в keyframes, которые не все браузеры пересчитывают. */
   const SHOT_MS = 20000;                       // вниз за 20 с, столько же обратно
-  const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const calm = !!window.reduceMotion;
   const shotAnims = new Map();
   const clock = () => (document.timeline && document.timeline.currentTime != null) ? document.timeline.currentTime : performance.now();
   let shotT0 = null, shotFrozen = 0, shotsOn = false;
@@ -729,6 +751,38 @@
         </div>
       </article>`;
     }).join('');
+    // на телефоне экраны листаются по одному: свайп, стрелки по бокам, точки снизу
+    $$('.app-phones', appsList).forEach(row => {
+      const slides = $$('.app-ph', row);
+      if (slides.length < 2) return;
+      const nav = document.createElement('div');
+      nav.className = 'app-nav';
+      nav.innerHTML = '<button class="app-nav__btn app-nav__btn--prev" type="button" aria-label="Предыдущий экран"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>' +
+        '<span class="app-nav__dots">' + slides.map((s, i) => '<button class="app-nav__dot" type="button" data-i="' + i + '" aria-label="Экран ' + (i + 1) + '"></button>').join('') + '</span>' +
+        '<button class="app-nav__btn app-nav__btn--next" type="button" aria-label="Следующий экран"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>';
+      row.after(nav);
+      const dots = $$('.app-nav__dot', nav);
+      let cur = -1, raf = 0;
+      const mark = () => {
+        raf = 0;
+        const i = Math.max(0, Math.min(slides.length - 1, Math.round(row.scrollLeft / (row.clientWidth || 1))));
+        if (i === cur) return;
+        cur = i;
+        dots.forEach((d, k) => d.setAttribute('aria-current', String(k === i)));
+      };
+      const go = i => {
+        const k = (i + slides.length) % slides.length;
+        row.scrollTo({ left: k * row.clientWidth, behavior: window.reduceMotion ? 'auto' : 'smooth' });
+      };
+      row.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(mark); }, { passive: true });
+      nav.addEventListener('click', e => {
+        const dot = e.target.closest('.app-nav__dot');
+        if (dot) return go(+dot.dataset.i);
+        if (e.target.closest('.app-nav__btn--prev')) go(cur - 1);
+        else if (e.target.closest('.app-nav__btn--next')) go(cur + 1);
+      });
+      mark();
+    });
   }
 
   /* ==========================================================================

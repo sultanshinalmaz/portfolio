@@ -736,16 +736,15 @@ html.is-skipped .scene--hero *{animation:none!important;transition:none!importan
 .board__caret{flex:none;width:.3em;height:.085em;margin:0 0 .1em .1em;background:currentColor;
   box-shadow:0 0 .18em rgba(246,213,146,.5);animation:caret 1.1s steps(1) infinite}
 @keyframes caret{0%{opacity:0}50%{opacity:1}}
-@media (prefers-reduced-motion:no-preference){
-  .js .board:not(.is-go) .board__word i{font-variation-settings:"ELSH" 0,"ELGR" 2}
-  .js .board:not(.is-go) .board__caret{animation:none;opacity:0}
-  .board.is-go .board__count{display:block}
-  .board.is-go .board__count i{animation:boardNum .5s ease-in-out both}
-  .board.is-go .board__count i:nth-child(2){animation-delay:.5s}
-  .board.is-go .board__count i:nth-child(3){animation-delay:1s}
-  .board.is-go .board__word i{animation:boardIn .8s cubic-bezier(.3,.7,.2,1) calc(1.5s + var(--i) * 75ms) both}
-  .board.is-go .board__caret{animation:caret 1.1s steps(1) 2.4s infinite backwards}
-}
+/* табло играет, если сайт не в режиме «меньше движения» (html.rm — data.js → motion: 'respect') */
+html.js:not(.rm) .board:not(.is-go) .board__word i{font-variation-settings:"ELSH" 0,"ELGR" 2}
+html.js:not(.rm) .board:not(.is-go) .board__caret{animation:none;opacity:0}
+html:not(.rm) .board.is-go .board__count{display:block}
+html:not(.rm) .board.is-go .board__count i{animation:boardNum .5s ease-in-out both}
+html:not(.rm) .board.is-go .board__count i:nth-child(2){animation-delay:.5s}
+html:not(.rm) .board.is-go .board__count i:nth-child(3){animation-delay:1s}
+html:not(.rm) .board.is-go .board__word i{animation:boardIn .8s cubic-bezier(.3,.7,.2,1) calc(1.5s + var(--i) * 75ms) both}
+html:not(.rm) .board.is-go .board__caret{animation:caret 1.1s steps(1) 2.4s infinite backwards}
 @keyframes boardNum{
   0%{opacity:1;font-variation-settings:"ELSH" 0,"ELGR" 2}
   35%{opacity:1;font-variation-settings:"ELSH" 14,"ELGR" 2}
@@ -920,12 +919,24 @@ html.is-skipped .scene--hero *{animation:none!important;transition:none!importan
 .apps .tags li{background:rgba(255,255,255,.06);border:1px solid rgba(239,233,220,.1);color:var(--text-l)}
 .app-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 @media (min-width:900px){ .app-info{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);align-items:end;gap:36px} }
+@media (min-width:760px){ .app-nav{display:none} }
 @media (max-width:759px){
-  .app-phones{justify-content:flex-start;gap:14px;margin:0 -16px;padding:8px 16px 40px;overflow-x:auto;
+  /* экраны по одному: каждый во всю ширину, телефон по центру, соседний не выглядывает */
+  .app-phones{justify-content:flex-start;gap:0;margin:0 -16px;padding:8px 0 40px;overflow-x:auto;overscroll-behavior-x:contain;
     scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .app-phones::-webkit-scrollbar{display:none}
-  .app-ph{width:min(62vw,240px);margin:0;transform:none;scroll-snap-align:center}
-  .app-ph .phone{animation:none}
+  .app-ph{flex:0 0 100%;width:100%;margin:0;transform:none;scroll-snap-align:center;scroll-snap-stop:always;
+    display:flex;flex-direction:column;align-items:center}
+  .app-ph .phone{width:min(64vw,250px);animation:none}
+  /* стрелки по бокам телефона и точки под подписью */
+  .app-nav{position:relative;display:flex;align-items:center;justify-content:center;gap:14px;margin:-4px 0 2px}
+  .app-nav__dots{display:flex;gap:8px}
+  .app-nav__dot{width:9px;height:9px;padding:0;border:0;border-radius:50%;background:rgba(239,233,220,.28);cursor:pointer;
+    transition:background .25s,transform .25s}
+  .app-nav__dot[aria-current="true"]{background:var(--gold-2);transform:scale(1.25)}
+  .app-nav__btn{display:grid;place-items:center;width:40px;height:40px;padding:0;border-radius:50%;cursor:pointer;
+    background:rgba(255,255,255,.07);border:1px solid rgba(239,233,220,.2);color:var(--text-l);-webkit-tap-highlight-color:transparent}
+  .app-nav__btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
   .app-actions .btn{flex:1 1 100%}
 }
 
@@ -1069,12 +1080,12 @@ html.is-shielded .guard{display:flex}
 /* ==========================================================================
    Уменьшенное движение
    ========================================================================== */
-@media (prefers-reduced-motion:reduce){
-  .human.is-shake,.dn.is-nudge,.board__caret{animation:none}
-  html{scroll-behavior:auto}
-  .ribbon__track,.mp,.mp__push,.hero__title .accent,.app-ph .phone,.scene *,.promo__spin{animation:none!important}
-  .route::before{clip-path:none!important;transition:none}
-  .sec-head>.sec-ar,.hero__ar{clip-path:none!important}
-  .num{transition:none}
-  .js .rise{opacity:1;transform:none;transition:none}
-}
+/* только когда сайт настроен уважать «Убрать анимацию» телефона (data.js → motion: 'respect'):
+   тогда на <html> класс rm. По умолчанию (motion: 'always') всё движение играет */
+html.rm .human.is-shake,html.rm .dn.is-nudge,html.rm .board__caret{animation:none}
+html.rm{scroll-behavior:auto}
+html.rm .ribbon__track,html.rm .mp,html.rm .mp__push,html.rm .hero__title .accent,html.rm .app-ph .phone,html.rm .scene *,html.rm .promo__spin{animation:none!important}
+html.rm .route::before{clip-path:none!important;transition:none}
+html.rm .sec-head>.sec-ar,html.rm .hero__ar{clip-path:none!important}
+html.rm .num{transition:none}
+html.rm.js .rise{opacity:1;transform:none;transition:none}

@@ -27,6 +27,13 @@
   (function () {
     var d = document.documentElement, play = true, hash = location.hash;
     d.classList.add('js');
+    // «меньше движения» — только если сайт так настроен (data.js → motion: 'respect')
+    var rm = false;
+    try { rm = !!(window.SITE && SITE.motion === 'respect' && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+    window.reduceMotion = rm;
+    if (rm) d.classList.add('rm');
+    // у обеих тем есть ролики — рисованный оазис на первом экране не показываем даже на миг
+    try { var hv = SITE.heroVideo || {}; if ((hv.day || hv.dayLoop) && (hv.night || hv.nightLoop)) d.classList.add('hv'); } catch (e) {}
     try {
       // тема при открытии — data.js → defaultTheme; прошлый выбор посетителя — только если rememberTheme
       var saved = null;
@@ -38,7 +45,7 @@
     } catch (e) {}
     try {
       if (/[?&]nointro\b/.test(location.search)) play = false;
-      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) play = false;
+      if (rm) play = false;
       var every = !(window.SITE && SITE.intro && SITE.intro.everyVisit === false);
       if (!every && sessionStorage.getItem('introSeen')) play = false;
     } catch (e) {}
@@ -117,7 +124,8 @@
   html.is-lit .hero__dawn{opacity:1}
   .hero__content>*{transition:opacity .8s ease,transform .9s cubic-bezier(.2,.7,.2,1);transition-delay:calc(var(--d,0) * 110ms)}
 
-  @media (prefers-reduced-motion:reduce){ .hero__stars i{animation:none} }
+  html.rm .hero__stars i{animation:none}
+  html.hv .scene--hero,html.hv .hero__moon,html.hv .hero__stars,html.hv .hero__dawn{visibility:hidden}
 </style>
 
 <link rel="stylesheet" href="assets/css/fonts.css">
@@ -127,15 +135,23 @@
 <body>
 <!-- ===== ЗАСТАВКА SAUDI MADE: вставить сразу после <body> ===== -->
 <style>
-  #sm-intro{position:fixed;inset:0;z-index:9999;background:#efe9dc;overflow:hidden}
-  /* телефон: печать целиком на 90 % ширины, над роликом и под ним — та же бумага */
-  #sm-intro.band{background:linear-gradient(180deg,#e2ddd1 0%,#dbd5c8 55%,#cdc7b9 100%)}
+  #sm-intro{position:fixed;inset:0;z-index:9999;overflow:hidden;
+    background:#d6d1c4 linear-gradient(150deg,#e9e5da,#d5d0c3 50%,#c0baab)}
   #sm-intro.gone-bg{background:transparent}
   #sm-intro video,#sm-intro canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
   #sm-intro video.framed{inset:auto;object-fit:fill}
-  #sm-intro.band video{-webkit-mask-image:linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);
-    mask-image:linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent)}
-  #sm-intro canvas{display:none;will-change:filter,transform}
+  /* ролик меньше экрана: вокруг — продолжение того же листа (canvas .paper), края ролика растушёваны.
+     band — телефон: лист сверху и снизу; box — широкий экран: ролик у верхнего края (штамп и рука
+     входят из-за края экрана, как в кадре), лист по бокам и снизу */
+  #sm-intro.band video{-webkit-mask-image:linear-gradient(transparent,#000 12%,#000 88%,transparent);
+    mask-image:linear-gradient(transparent,#000 12%,#000 88%,transparent)}
+  #sm-intro.box video{
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent),linear-gradient(#000 88%,transparent);
+    -webkit-mask-composite:source-in;
+    mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent),linear-gradient(#000 88%,transparent);
+    mask-composite:intersect}
+  #sm-intro.gone-bg .paper{display:none}
+  #sm-intro .fog{display:none;will-change:filter,transform}
   #sm-intro .skip{position:absolute;right:20px;bottom:20px;z-index:2;font:500 13px/1 system-ui,sans-serif;
     color:#1f5b3a;background:rgba(255,255,255,.6);border:1px solid rgba(31,91,58,.25);
     border-radius:999px;padding:10px 16px;cursor:pointer;backdrop-filter:blur(6px);transition:opacity .4s}
@@ -143,20 +159,30 @@
 </style>
 
 <div id="sm-intro" aria-hidden="true">
+  <canvas class="paper"></canvas>
   <video muted playsinline autoplay preload="auto" poster="intro/poster.jpg">
     <source src="intro/intro.webm" type="video/webm">
     <source src="intro/intro.mp4" type="video/mp4">
   </video>
-  <canvas></canvas>
+  <canvas class="fog"></canvas>
   <button class="skip" type="button">Пропустить</button>
 </div>
 
 <script>
 (function(){
   var box=document.getElementById('sm-intro'); if(!box) return;
-  var v=box.querySelector('video'), cv=box.querySelector('canvas'), skip=box.querySelector('.skip'), done=false;
-  var DUR=2200; // длительность растворения, мс
-  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var v=box.querySelector('video'), cv=box.querySelector('.fog'), pc=box.querySelector('.paper'),
+      skip=box.querySelector('.skip'), done=false, R=null;
+  var DUR=2200;   // длительность растворения, мс
+  var SIZE=0.75;  // печать на четверть меньше, чем «во весь экран» — не бьёт в глаза
+  var STAMP=0.32; // штамп при ударе заходит до 81 % ширины кадра (и до 19 % слева) — держим его в экране
+  var EDGE=0.12;  // растушёвка краёв ролика, доля кадра (оттиск начинается с 15 %)
+  // свет на бумаге (tools/intro-paper.mjs): c0 + cx·x + cy·y, x и y — доли кадра. LIGHT — последний
+  // кадр, LIGHT0 — первый (постер: камера ещё не «села», лист светлее). paper.jpg — тот же лист без
+  // оттиска и без света, бесшовный, волокна на яркости K
+  var LIGHT=[[236.7,-21.9,-22.6],[231.3,-24,-24.8],[219.9,-25.2,-26]],
+      LIGHT0=[[247.9,-27,-17.3],[244.4,-30.7,-18.8],[233.2,-32.5,-19.2]], K=240, live=LIGHT0;
+  var reduce=!!window.reduceMotion; // «меньше движения» — только если data.js → motion: 'respect'
   // играть ли, решает <head>: data.js → intro.everyVisit, адрес с ?nointro, «без анимаций»
   var play=window.smPlay!==false&&!reduce;
   function remove(){ box.remove(); document.body.classList.remove('sm-lock'); }
@@ -165,45 +191,116 @@
   if(!play){ remove(); return; }
   document.body.classList.add('sm-lock');
 
-  // кадр: на широком экране — во весь экран (как object-fit:cover); на вертикальном — печать
-  // (≈40 % ширины кадра) целиком на 90 % ширины экрана, сверху и снизу — та же бумага
+  // кадр: как «во весь экран» (на вертикальном — печать на 90 % ширины), только на четверть меньше;
+  // на телефоне ещё и так, чтобы штамп при ударе целиком помещался по ширине
   function place(W,H,vw,vh){
     var s=Math.max(W/vw,H/vh);
     if(W<H) s=Math.max(W/vw,Math.min(s,W*0.9/(0.406*vw)));
-    var w=vw*s,h=vh*s; return {x:(W-w)/2,y:(H-h)/2,w:w,h:h,band:h<H-1};
+    s=Math.min(s*SIZE,W/(2*STAMP*vw));
+    var w=vw*s,h=vh*s,wide=w<W-1;
+    return {W:W,H:H,x:(W-w)/2,y:wide?Math.min(0,(H-h)/2):(H-h)/2,w:w,h:h,fit:wide?'box':h<H-1?'band':''};
   }
   function frameVideo(){
-    var r=place(innerWidth,innerHeight,v.videoWidth||1280,v.videoHeight||720);
+    R=place(box.clientWidth||innerWidth,box.clientHeight||innerHeight,v.videoWidth||1280,v.videoHeight||720);
     v.classList.add('framed');
-    v.style.left=r.x+'px'; v.style.top=r.y+'px'; v.style.width=r.w+'px'; v.style.height=r.h+'px';
-    box.classList.toggle('band',r.band);
+    v.style.left=R.x+'px'; v.style.top=R.y+'px'; v.style.width=R.w+'px'; v.style.height=R.h+'px';
+    box.classList.toggle('band',R.fit==='band'); box.classList.toggle('box',R.fit==='box');
+    paint();
+  }
+
+  // лист вокруг ролика: бесшовная текстура в масштабе ролика, поверх — свет как в ролике;
+  // за краями кадра свет меняется вдвое мягче
+  var tex=new Image(); tex.fetchPriority='high'; tex.onload=paint; tex.src='intro/paper.jpg';
+  function paint(){
+    var r=R; if(!r||!r.fit) return;
+    var dpr=Math.min(window.devicePixelRatio||1,1.5), W=r.W, H=r.H, ok=tex.complete&&tex.naturalWidth>0;
+    var pw=Math.round(W*dpr), ph=Math.round(H*dpr);
+    if(pc.width!==pw||pc.height!==ph){ pc.width=pw; pc.height=ph; }
+    var c=pc.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.globalCompositeOperation='source-over';
+    if(ok){
+      var pat=c.createPattern(tex,'repeat');
+      if(pat.setTransform&&window.DOMMatrix) pat.setTransform(new DOMMatrix([r.w/tex.naturalWidth,0,0,r.h/tex.naturalHeight,r.x,r.y]));
+      c.fillStyle=pat; c.fillRect(0,0,W,H);
+      c.globalCompositeOperation='multiply';
+    }
+    var L=live, gx=-L[1][1]/r.w, gy=-L[1][2]/r.h, n=Math.hypot(gx,gy)||1, ux=gx/n, uy=gy/n;   // куда темнеет
+    var cx=r.x+r.w/2, cy=r.y+r.h/2, k=ok?255/K:1;
+    var tv=r.w/2*Math.abs(ux)+r.h/2*Math.abs(uy);
+    var T=Math.max(tv,Math.abs((W/2-cx)*ux+(H/2-cy)*uy)+W/2*Math.abs(ux)+H/2*Math.abs(uy));
+    function at(t){ var fx=.5+t*ux/r.w, fy=.5+t*uy/r.h;
+      return 'rgb('+L.map(function(m){ return Math.round(Math.max(0,Math.min(255,(m[0]+m[1]*fx+m[2]*fy)*k))); })+')'; }
+    var g=c.createLinearGradient(cx-T*ux,cy-T*uy,cx+T*ux,cy+T*uy), e=(T-tv)/(2*T), far=tv+(T-tv)/2;
+    g.addColorStop(0,at(-far)); g.addColorStop(e,at(-tv)); g.addColorStop(1-e,at(tv)); g.addColorStop(1,at(far));
+    c.fillStyle=g; c.fillRect(0,0,W,H); c.globalCompositeOperation='source-over';
   }
   frameVideo(); addEventListener('resize',frameVideo); v.addEventListener('loadedmetadata',frameVideo);
 
+  // свет вокруг следует за роликом: в первые секунды камера ещё «садится» (лист светлее), потом
+  // проходит тень штампа. Раз в 100 мс меряем бумагу у краёв кадра, рядом с листом вокруг (светлую
+  // четверть точек — штамп и рука темнее бумаги и не в счёт), и подправляем свет вокруг
+  var probe=document.createElement('canvas'); probe.width=32; probe.height=18;
+  var pr=probe.getContext('2d',{willReadFrequently:true}), fresh=true;
+  function follow(){
+    var r=R; if(done||!r||!r.fit||v.readyState<2) return;
+    try{ pr.drawImage(v,0,0,32,18); var d=pr.getImageData(0,0,32,18).data; }catch(e){ clearInterval(followT); return; }
+    var pts=[];
+    function edge(i0,i1,j0,j1){
+      var s=[[],[],[]], fx=0, fy=0, n=0;
+      for(var j=j0;j<=j1;j++) for(var i=i0;i<=i1;i++){
+        var x=(i+.5)/32, y=(j+.5)/18, X=r.x+x*r.w, Y=r.y+y*r.h;
+        if(X<0||X>r.W||Y<0||Y>r.H) continue;                       // эта часть кадра за экраном
+        for(var ch=0;ch<3;ch++){ var m=LIGHT[ch]; s[ch].push(d[(j*32+i)*4+ch]-(m[0]+m[1]*x+m[2]*y)); }
+        fx+=x; fy+=y; n++;
+      }
+      if(n<4) return;
+      pts.push([fx/n,fy/n,s.map(function(a){ a.sort(function(p,q){return p-q}); return a[Math.floor(a.length*.75)]; })]);
+    }
+    if(r.y>0) edge(0,31,0,1);
+    if(r.y+r.h<r.H) edge(0,31,16,17);
+    if(r.x>0){ edge(0,1,0,17); edge(30,31,0,17); }
+    if(!pts.length) return;
+    // поправка к LIGHT — плоскость a + b·x + c·y через края (МНК; b и c слегка «придержаны»)
+    var nl=[0,1,2].map(function(ch){
+      var A=[[0,0,0],[0,.05,0],[0,0,.05]], b=[0,0,0];
+      pts.forEach(function(p){ var q=[1,p[0],p[1]]; for(var i=0;i<3;i++){ b[i]+=q[i]*p[2][ch]; for(var j=0;j<3;j++) A[i][j]+=q[i]*q[j]; } });
+      for(var i=0;i<3;i++) for(var k=i+1;k<3;k++){ var f=A[k][i]/A[i][i]; for(var j=i;j<3;j++) A[k][j]-=f*A[i][j]; b[k]-=f*b[i]; }
+      var o=[0,0,0]; for(var i2=2;i2>=0;i2--){ var s=b[i2]; for(var j2=i2+1;j2<3;j2++) s-=A[i2][j2]*o[j2]; o[i2]=s/A[i2][i2]; }
+      return LIGHT[ch].map(function(m,z){ return m+o[z]; });
+    });
+    live=fresh?nl:live.map(function(m,ch){ return m.map(function(x,z){ return x*.5+nl[ch][z]*.5; }); });
+    fresh=false; paint();
+  }
+  var followT=setInterval(follow,100);
+
+  // растушёвка краёв ролика на холсте — как маска у <video> в стилях выше
+  function feather(ctx,x0,y0,x1,y1,a,b){
+    var m=ctx.createLinearGradient(x0,y0,x1,y1);
+    m.addColorStop(0,a?'rgba(0,0,0,0)':'#000'); m.addColorStop(EDGE,'#000');
+    m.addColorStop(1-EDGE,'#000'); m.addColorStop(1,b?'rgba(0,0,0,0)':'#000');
+    ctx.fillStyle=m; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  }
   function finish(){
-    if(done) return; done=true;
+    if(done) return;
+    follow(); done=true; clearInterval(followT);
     removeEventListener('resize',frameVideo);
     skip.style.opacity=0;
     document.body.classList.remove('sm-lock');
     open();
-    var dpr=Math.min(window.devicePixelRatio||1,1.5), W=innerWidth, H=innerHeight;
+    var dpr=Math.min(window.devicePixelRatio||1,1.5), r=R, W=r.W, H=r.H;
     cv.width=W*dpr; cv.height=H*dpr;
     var ctx=cv.getContext('2d');
-    // кадр печати — ровно так, как стоял ролик (на телефоне — с бумагой вокруг)
+    // кадр печати — ровно так, как стоял ролик: с листом вокруг и растушёванными краями
     var frame=document.createElement('canvas'); frame.width=cv.width; frame.height=cv.height;
     try{
-      var fc=frame.getContext('2d'), vw=v.videoWidth||1280, vh=v.videoHeight||720, r=place(W,H,vw,vh);
+      var fc=frame.getContext('2d');
       var tmp=document.createElement('canvas'); tmp.width=frame.width; tmp.height=frame.height;
       var tc=tmp.getContext('2d');
       tc.drawImage(v,r.x*dpr,r.y*dpr,r.w*dpr,r.h*dpr);
-      if(r.band){
+      if(r.fit){
         tc.globalCompositeOperation='destination-in';
-        var m=tc.createLinearGradient(0,r.y*dpr,0,(r.y+r.h)*dpr);
-        m.addColorStop(0,'rgba(0,0,0,0)'); m.addColorStop(.14,'#000'); m.addColorStop(.86,'#000'); m.addColorStop(1,'rgba(0,0,0,0)');
-        tc.fillStyle=m; tc.fillRect(0,0,tmp.width,tmp.height);
-        var bg=fc.createLinearGradient(0,0,0,frame.height);
-        bg.addColorStop(0,'#e2ddd1'); bg.addColorStop(.55,'#dbd5c8'); bg.addColorStop(1,'#cdc7b9');
-        fc.fillStyle=bg; fc.fillRect(0,0,frame.width,frame.height);
+        if(r.fit==='band') feather(tc,0,r.y*dpr,0,(r.y+r.h)*dpr,true,true);
+        else { feather(tc,r.x*dpr,0,(r.x+r.w)*dpr,0,true,true); feather(tc,0,r.y*dpr,0,(r.y+r.h)*dpr,false,true); }
+        fc.drawImage(pc,0,0,frame.width,frame.height);
       }
       fc.drawImage(tmp,0,0);
     }catch(e){ box.style.transition='opacity 1s'; box.style.opacity=0; setTimeout(remove,1000); return; }
@@ -232,10 +329,14 @@
       if(t<1) requestAnimationFrame(tick); else remove();
     })(t0);
   }
+  // без ролика — сразу сайт (лист плавно гаснет)
+  function bail(){ if(done) return; done=true; clearInterval(followT); open();
+    box.style.transition='opacity .6s'; box.style.opacity=0; setTimeout(remove,650); }
   v.addEventListener('ended', finish);
-  v.addEventListener('error', function(){ done=true; remove(); open(); });
+  v.addEventListener('error', bail);
   skip.addEventListener('click', finish);
-  var p=v.play(); if(p&&p.catch) p.catch(function(){ done=true; remove(); open(); }); // автоплей запрещён — сразу сайт
+  var p=v.play(); if(p&&p.catch) p.catch(bail);                  // автоплей запрещён
+  setTimeout(function(){ if(v.currentTime<0.05) bail(); }, 4500); // ролик так и не пошёл (медленная сеть)
   setTimeout(finish, 11000); // страховка
 })();
 </script>
