@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SIFR — поведение страницы. Весь текст берётся из data.js.
+   SAUDI MADE — поведение страницы. Весь текст берётся из data.js.
    ========================================================================== */
 (function () {
   'use strict';
@@ -165,6 +165,7 @@
   if (themeBtn) {
     paintSwitch();
     themeBtn.addEventListener('click', () => {
+      if (themeLocked) return nudgeLocked();
       const day = !isDay();
       dnRot += 180;                                     // колесо всегда крутится вперёд
       const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -186,50 +187,282 @@
     });
   }
 
-  /* ---------- видео дня и ночи на первом экране ----------
-     Пути — в data.js → heroVideo. Пока их нет, работает рисованная сцена.
-     Играет только видео текущей темы; при смене темы ролики сменяют друг друга.
-     Класс «видно» ставится, только когда play() удался, — иначе остаётся
-     постер, а не замерший кадр (так бывает на телефонах в режиме энергосбережения). */
+  /* ---------- видео на первом экране ----------
+     Одна камера над двором Мечети Пророка ﷺ. У каждой темы — переход и фон:
+     день — рассвет (day: ночь → восход, зонты раскрываются) и день по кругу (dayLoop);
+     ночь — закат (night: день → закат, зонты складываются, зажигаются огни) и ночь
+     по кругу (nightLoop). Переключили тему — её переход играет один раз от начала
+     до конца; пока он идёт, переключатель заблокирован, по его низу бежит золотая
+     полоска. Под самый конец переход плавно сменяется фоном по кругу, а если фона
+     нет — замирает на последнем кадре. Открыли сайт днём — после заставки сначала
+     рассвет, потом день по кругу (dayOnLoad); ночью — сразу ночь по кругу.
+     Кадр — целиком, как в самом видео: без обрезки, прижат к низу первого экрана;
+     свободное место заполняет продолжение кадра (см. ниже). Фон крутится, только
+     пока первый экран на виду. Пути — data.js → heroVideo. */
   const HV = S.heroVideo || {};
-  const heroEl = $('.hero'), vBox = $('#heroVideo'), heroVids = {};
-  if (vBox && (HV.day || HV.night)) {
-    ['day', 'night'].forEach(t => {
-      if (!HV[t]) return;
-      const v = document.createElement('video');
-      v.muted = true; v.loop = true; v.playsInline = true;
-      v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
-      v.preload = 'none';
-      if (HV[t + 'Poster']) v.poster = HV[t + 'Poster'];
-      v.src = (window.innerWidth < 820 && HV[t + 'Mobile']) || HV[t];
-      vBox.appendChild(v);
-      heroVids[t] = v;
-    });
-    vBox.classList.add('has-video');
+  const heroEl = $('.hero'), vBox = $('#heroVideo');
+  const small = window.innerWidth < 820;
+  const pick = k => (small && HV[k + 'Mobile']) || HV[k] || '';
+  const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SWAP_AT = 0.75;                         // за сколько секунд до конца перехода проявляется фон
+  const THEMES = ['day', 'night'];
+  let heroVisible = true, themeLocked = false;
+
+  function makeVideo(src, loop, poster) {
+    if (!vBox || !src) return null;
+    const v = document.createElement('video');
+    v.muted = true; v.loop = !!loop; v.playsInline = true; v.preload = 'none';
+    ['muted', 'playsinline', 'disablepictureinpicture'].forEach(x => v.setAttribute(x, ''));
+    v.setAttribute('aria-hidden', 'true');
+    v.className = 'hero__vid--cam';
+    if (poster) v.poster = poster;
+    v.src = src;
+    vBox.appendChild(v);
+    return v;
   }
-  let heroVisible = true;
-  function syncHeroVideo() {
-    const t = isDay() ? 'day' : 'night';
-    heroEl.classList.toggle('video-on', !!heroVids[t]);
-    Object.keys(heroVids).forEach(k => {
-      const v = heroVids[k];
-      if (k === t && heroVisible) {
-        v.preload = 'auto';
-        const p = v.play();
-        if (p && p.then) p.then(() => v.classList.add('is-on')).catch(() => { if (v.poster) v.classList.add('is-on'); });
-        else v.classList.add('is-on');
-      } else {
-        if (k !== t) v.classList.remove('is-on');
-        setTimeout(() => { if (k !== (isDay() ? 'day' : 'night') || !heroVisible) v.pause(); }, 1300);
-      }
-    });
+  // у каждой темы: intro — переход (играет один раз), loop — фон по кругу
+  // (лежит над переходом и при смене проявляется поверх)
+  const TH = {};
+  THEMES.forEach(k => {
+    TH[k] = { intro: makeVideo(pick(k), false, pick(k + 'Start')), loop: makeVideo(pick(k + 'Loop'), true, pick(k + 'LoopPoster')) };
+  });
+  const allVideos = THEMES.flatMap(k => [TH[k].intro, TH[k].loop]).filter(Boolean);
+  const anyVideo = allVideos.length > 0;
+  if (anyVideo) vBox.classList.add('has-video');
+
+  let cur = isDay() ? 'day' : 'night';
+  // фаза текущей темы: 'intro' — идёт переход; 'swap' — фон запущен и ждёт первого кадра;
+  // 'fade' — фон проявляется поверх перехода; 'loop' — фон (или последний кадр перехода)
+  let phase = 'loop';
+  let played = false;                           // переход темы уже сыгран: без фона стоит его последний кадр
+
+  /* кадр целиком: ролик вписан в первый экран без обрезки и прижат к низу (размер — --cam-w/-h).
+     Свободное место над роликом (телефон, обычный монитор) заполняет продолжение кадра:
+     его верхний край, растянутый и размытый, — небо тянется вверх. На экране шире кадра
+     ролик во всю ширину и прижат к верху.
+     Рисуется в маленький canvas под роликом и меняется вместе с кадром. */
+  const RATIO = HV.ratio || 16 / 9;
+  const amb = document.createElement('canvas');
+  amb.className = 'hero__amb';
+  amb.setAttribute('aria-hidden', 'true');
+  const actx = anyVideo ? amb.getContext('2d') : null;
+  if (anyVideo) vBox.prepend(amb);
+  const box = { W: 0, H: 0, x: 0, y: 0, w: 0, h: 0 };
+  function fitVideo() {
+    if (!anyVideo) return;
+    const W = vBox.clientWidth, H = vBox.clientHeight;
+    if (!W || !H) return;
+    // экран уже кадра — ролик целиком по ширине, прижат к низу, сверху продолжение неба;
+    // экран шире кадра — ролик во всю ширину, прижат к верху (луна и солнце целы), снизу
+    // срезается немного двора — без полос по бокам
+    const w = W, h = W / RATIO, wide = h > H;
+    Object.assign(box, { W, H, w, h, x: 0, y: wide ? 0 : H - h });
+    vBox.classList.toggle('fit-wide', wide);
+    vBox.style.setProperty('--cam-w', w.toFixed(1) + 'px');
+    vBox.style.setProperty('--cam-h', h.toFixed(1) + 'px');
+    vBox.classList.toggle('fit-top', box.y > 2);
+    amb.width = 96; amb.height = Math.max(8, Math.round(96 * H / W));
+    drawAmb();
   }
-  if (Object.keys(heroVids).length) {
-    document.addEventListener('theme:change', syncHeroVideo);
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(es => { heroVisible = es[0].isIntersecting; syncHeroVideo(); }).observe(heroEl);
+  const posters = new Map();                    // кадр-заставка ролика — пока тот не пошёл
+  function frameOf(v) {
+    if (v.readyState >= 2 && v.videoWidth) return [v, v.videoWidth, v.videoHeight];
+    let im = posters.get(v);
+    if (!im && v.poster) { im = new Image(); im.onload = () => drawAmb(); im.src = v.poster; posters.set(v, im); }
+    return im && im.complete && im.naturalWidth ? [im, im.naturalWidth, im.naturalHeight] : null;
+  }
+  function onScreen() {
+    const t = TH[cur];
+    if (t.loop && t.loop.classList.contains('is-on')) return t.loop;
+    if (t.intro && t.intro.classList.contains('is-on')) return t.intro;
+    return null;
+  }
+  function drawAmb() {
+    if (!actx || !box.W) return;
+    const v = onScreen(), f = v && frameOf(v);
+    if (!f) return;
+    const [src, sw, sh] = f, k = amb.width / box.W;
+    const x = box.x * k, y = box.y * k, w = box.w * k, h = box.h * k;
+    try {
+      actx.drawImage(src, 0, 0, sw, sh, x, y, w, h);
+      if (y > 0) actx.drawImage(src, 0, 0, sw, sh * 0.05, x, 0, w, y + 1);                          // небо — вверх
+    } catch (e) {}
+  }
+  // пока ролик идёт и первый экран на виду — продолжение кадра обновляется ~15 раз в секунду
+  let ambRaf = 0, ambT = 0;
+  function ambTick(ts) {
+    ambRaf = 0;
+    if (!heroVisible || document.hidden) return;
+    if (ts - ambT > 66) { ambT = ts; drawAmb(); }
+    const v = onScreen();
+    if (v && !v.paused) ambRaf = requestAnimationFrame(ambTick);
+  }
+  const ambKick = () => { if (!ambRaf) ambRaf = requestAnimationFrame(ambTick); };
+  allVideos.forEach(v => {
+    v.addEventListener('playing', ambKick);
+    ['loadeddata', 'seeked'].forEach(t => v.addEventListener(t, () => drawAmb()));
+  });
+
+  function markHero() {
+    let on = false;
+    THEMES.forEach(k => {
+      const t = TH[k], here = k === cur;
+      const loopOn = !!t.loop && here && (phase === 'fade' || phase === 'loop');
+      // переход уходит, только когда фон проявился целиком — без просвета между ними
+      const introOn = !!t.intro && here && (phase === 'intro' || phase === 'swap' || phase === 'fade' || (!t.loop && played));
+      if (t.intro) t.intro.classList.toggle('is-on', introOn);
+      if (t.loop) t.loop.classList.toggle('is-on', loopOn);
+      if (here) on = introOn || loopOn;
+    });
+    heroEl.classList.toggle('video-on', on);
+    root.classList.toggle('is-hero-video', on);
+    drawAmb(); ambKick();
+  }
+
+  // блокировка переключателя и полоска «сколько осталось»
+  let lockRaf = 0, lockT = 0, tipT = 0, tip = null, showT = 0, syncT = 0;
+  function lockTheme(on, v) {
+    themeLocked = on;
+    themeBtn.classList.toggle('is-locked', on);
+    themeBtn.setAttribute('aria-disabled', String(on));
+    themeBtn.title = on ? 'Дождитесь конца видео — потом можно переключить тему' : 'День / ночь';
+    cancelAnimationFrame(lockRaf);
+    if (on) {
+      const tick = () => {
+        const t = v.currentTime, d = v.duration;
+        themeBtn.style.setProperty('--vp', Math.min(1, t / (d || 15)).toFixed(3));
+        if (d && d - t < SWAP_AT) toLoop();
+        lockRaf = requestAnimationFrame(tick);
+      };
+      tick();
+    } else {
+      clearTimeout(lockT);
+      themeBtn.style.removeProperty('--vp');
+      if (tip) tip.classList.remove('is-on');
     }
-    syncHeroVideo();
+  }
+  function nudgeLocked() {
+    themeBtn.classList.remove('is-nudge'); void themeBtn.offsetWidth; themeBtn.classList.add('is-nudge');
+    if (!tip) {
+      tip = document.createElement('span');
+      tip.className = 'dn-tip';
+      tip.setAttribute('role', 'status');
+      tip.textContent = 'Досмотрите видео — потом тему можно переключить';
+      themeBtn.parentNode.appendChild(tip);
+    }
+    // под переключателем, но не за краем экрана
+    const sr = themeBtn.parentNode.getBoundingClientRect(), br = themeBtn.getBoundingClientRect();
+    tip.style.left = Math.max(12 - sr.left, Math.min(br.left - sr.left, window.innerWidth - 12 - tip.offsetWidth - sr.left)) + 'px';
+    tip.classList.add('is-on');
+    clearTimeout(tipT);
+    tipT = setTimeout(() => tip.classList.remove('is-on'), 2400);
+  }
+
+  // переход → фон: фон стартует с начала (его первый кадр — последний кадр перехода)
+  // и проявляется поверх, как только пошёл; quick — не ждать, показать сразу
+  function toLoop(quick) {
+    if (phase !== 'intro') return;
+    const k = cur, L = TH[k].loop;
+    if (!L) { phase = 'loop'; markHero(); return; }   // фона нет — переход замирает на последнем кадре
+    phase = 'swap';
+    try { L.currentTime = 0; } catch (e) {}
+    const show = () => {
+      L.removeEventListener('playing', show);
+      clearTimeout(showT);
+      if (phase !== 'swap' || cur !== k) return;
+      phase = 'fade';
+      L.classList.add('is-swap');
+      markHero();
+      showT = setTimeout(() => {
+        L.classList.remove('is-swap');
+        if (phase === 'fade' && cur === k) { phase = 'loop'; markHero(); }
+      }, 800);
+    };
+    if (quick) { show(); syncLoops(); return; }
+    L.addEventListener('playing', show);
+    showT = setTimeout(show, 1500);             // не пошёл (экран прокручен, медленная сеть) — показать кадр
+    syncLoops();
+  }
+
+  // переход текущей темы: один раз от начала до конца, переключатель ждёт
+  function playIntro() {
+    const t = TH[cur], v = t.intro;
+    if (!v || still) { phase = 'loop'; return; }   // без анимаций — сразу фон
+    phase = 'intro'; played = true;
+    v.preload = 'auto';
+    if (t.loop) { t.loop.pause(); t.loop.preload = 'auto'; } // фон грузится, пока идёт переход
+    try { v.currentTime = 0; } catch (e) {}
+    lockTheme(true, v);
+    let done = false;
+    const finish = quick => { if (done) return; done = true; lockTheme(false); toLoop(quick); };
+    v.onended = () => finish(false);
+    v.onerror = () => finish(true);
+    // страховка: если конец так и не пришёл (медленная сеть, свернули вкладку) — разблокируем
+    lockT = setTimeout(() => finish(true), 30000);
+    const p = v.play();
+    if (p && p.catch) p.catch(() => finish(true));   // телефон не дал запустить — сразу фон
+  }
+  // ушли из темы: когда её ролик растворился — пауза, переход на начало (в следующий раз без вспышки)
+  function leave(k) {
+    setTimeout(() => {
+      if (cur === k) return;
+      const t = TH[k];
+      if (t.intro) { t.intro.pause(); try { t.intro.currentTime = 0; } catch (e) {} }
+      if (t.loop) t.loop.pause();
+    }, 1300);
+  }
+  // фон по кругу играет, только пока первый экран на виду и вкладка открыта
+  function syncLoops() {
+    const want = k => !!TH[k].loop && cur === k && phase !== 'intro' && heroVisible && !document.hidden && !still;
+    THEMES.forEach(k => {
+      if (!want(k)) return;
+      const L = TH[k].loop; L.preload = 'auto';
+      const p = L.play(); if (p && p.catch) p.catch(() => {});
+    });
+    clearTimeout(syncT);                          // остановка — после того как ролик растворился
+    syncT = setTimeout(() => THEMES.forEach(k => { const L = TH[k].loop; if (L && !want(k)) L.pause(); }), 1300);
+    ambKick();
+  }
+
+  if (anyVideo) {
+    // открыли сайт днём — после заставки сначала рассвет, потом день по кругу
+    const dawnFirst = cur === 'day' && HV.dayOnLoad !== false && !!TH.day.intro && !still;
+    if (dawnFirst) {
+      phase = 'intro'; played = true;             // на месте первый кадр рассвета
+      TH.day.intro.preload = 'auto';              // грузится, пока идёт заставка
+      if (TH.day.loop) TH.day.loop.preload = 'auto';
+    }
+    fitVideo();
+    if ('ResizeObserver' in window) new ResizeObserver(fitVideo).observe(vBox);
+    else window.addEventListener('resize', fitVideo, { passive: true });
+    markHero();
+    document.addEventListener('theme:change', e => {
+      const next = e.detail.theme === 'day' ? 'day' : 'night';
+      if (next === cur) return;
+      const prev = cur;
+      cur = next; played = false; phase = 'loop';
+      playIntro();
+      leave(prev);
+      markHero();
+      syncLoops();
+    });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(es => { heroVisible = es[0].isIntersecting; syncLoops(); }).observe(heroEl);
+    }
+    document.addEventListener('visibilitychange', syncLoops);
+    if (dawnFirst) {
+      const start = () => { if (cur === 'day' && phase === 'intro') playIntro(); };
+      if (root.classList.contains('is-intro')) document.addEventListener('intro:done', start, { once: true });
+      else start();
+    }
+    syncLoops();
+    // переход другой темы заранее подгружается, когда рука тянется к переключателю
+    const warm = () => {
+      if (still) return;
+      const v = TH[cur === 'day' ? 'night' : 'day'].intro;
+      if (v && v.preload === 'none') v.preload = 'auto';
+    };
+    ['pointerenter', 'touchstart', 'focus'].forEach(t => themeBtn.addEventListener(t, warm, { passive: true }));
   }
 
   /* ---------- мобильное меню ---------- */
@@ -713,89 +946,6 @@
   } else seeDemo();
 
   /* ==========================================================================
-     ПОДХОД: оазис, а не мираж
-     В телефоне два сайта с одной сеткой: слева мираж — красиво, но ни цен,
-     ни кнопки, и всё дрожит, как воздух над песком; справа оазис — всё
-     нужное на первом экране. Ползунок тянут пальцем, мышью или стрелками.
-     На телефоне вертикальный жест листает страницу, а не двигает ползунок.
-     ========================================================================== */
-  const mir = $('#mirage');
-  if (mir) {
-    mir.innerHTML = `
-      <div class="mirage__phone phone">
-        <div class="phone__screen mirage__screen">
-          <div class="mz mz--oasis" aria-hidden="true">
-            <span class="mz__tag">Оазис</span>
-            <div class="mz__bar"><b>${esc(D.cafe)}</b><span>★ 4,9</span></div>
-            <div class="mz__hero"><b>${esc(D.mini.title)}</b><small>Медина, Кубá · 5 минут от мечети</small><em><i></i>Открыто до 24:00</em></div>
-            <ul class="mz__menu">${D.menu.map(m => `<li><span>${m.e} ${esc(m.n)}</span><b>${m.p} SAR</b></li>`).join('')}</ul>
-            <span class="mz__info">🛵 Доставка по Медине · 20–30 минут</span>
-            <span class="mz__cta">${icon('i-wa')}Заказать в WhatsApp</span>
-          </div>
-          <div class="mz mz--mirage" aria-hidden="true"><div class="mz__haze">
-            <span class="mz__tag">Мираж</span>
-            <div class="mz__bar"><b>LOGO</b><span>☰</span></div>
-            <div class="mz__hero"><b>Добро пожаловать!</b><small>Мы — лучшие в городе. Качество, надёжность, индивидуальный подход.</small></div>
-            <div class="mz__ghost"><i></i><i></i><i></i><i></i></div>
-            <span class="mz__more">Подробнее →</span>
-            <span class="mz__load"><i></i>Загружаем цены…</span>
-            <span class="mz__cookie">Мы используем cookie <b>OK</b></span>
-          </div></div>
-          <span class="phone__island"></span>
-          <div class="mirage__handle" role="slider" tabindex="0" aria-label="Сравнить сайт-мираж и сайт-оазис"
-            aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i></i></div>
-        </div>
-      </div>`;
-    const ph = $('.mirage__phone', mir), scr = $('.mirage__screen', mir), handle = $('.mirage__handle', mir);
-    let pos = 50, down = false, drag = false, sx = 0, sy = 0, hintRaf = 0, jumpT;
-    const setPos = v => {
-      pos = clamp(v, 0, 100);
-      ph.style.setProperty('--mx', pos.toFixed(1) + '%');
-      handle.setAttribute('aria-valuenow', Math.round(pos));
-      handle.setAttribute('aria-valuetext', pos < 15 ? 'Видно оазис' : pos > 85 ? 'Видно мираж' : 'Пополам: мираж слева, оазис справа');
-    };
-    const at = e => { const r = scr.getBoundingClientRect(); return (e.clientX - r.left) / r.width * 100; };
-    const stopHint = () => { cancelAnimationFrame(hintRaf); hintRaf = 0; };
-    const jump = v => { ph.classList.add('is-jump'); setPos(v); clearTimeout(jumpT); jumpT = setTimeout(() => ph.classList.remove('is-jump'), 380); };
-    ph.addEventListener('pointerdown', e => { down = true; drag = false; sx = e.clientX; sy = e.clientY; });
-    ph.addEventListener('pointermove', e => {
-      if (!down) return;
-      if (!drag) {                                   // вертикальный жест — это прокрутка страницы
-        const dx = Math.abs(e.clientX - sx), dy = Math.abs(e.clientY - sy);
-        if (dx < 6 || dx < dy) return;
-        drag = true; stopHint();
-        try { ph.setPointerCapture(e.pointerId); } catch (err) {}
-      }
-      setPos(at(e));
-    });
-    ph.addEventListener('pointerup', e => { if (down && !drag) { stopHint(); jump(at(e)); } down = drag = false; });
-    ph.addEventListener('pointercancel', () => { down = drag = false; });
-    handle.addEventListener('keydown', e => {
-      const k = { ArrowLeft: -5, ArrowDown: -5, ArrowRight: 5, ArrowUp: 5, PageDown: -20, PageUp: 20, Home: -100, End: 100 }[e.key];
-      if (k == null) return;
-      e.preventDefault(); stopHint(); jump(pos + k);
-    });
-    setPos(50);
-    // подсказка: когда телефон впервые на экране, ползунок сам проходит туда и обратно
-    const hint = () => {
-      if (calm) return;
-      const t0 = performance.now(), keys = [50, 16, 84, 50], seg = 950;
-      const step = now => {
-        const e = (now - t0) / seg, i = Math.floor(e);
-        if (i >= keys.length - 1) { setPos(50); hintRaf = 0; return; }
-        const p = e - i, s = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-        setPos(keys[i] + (keys[i + 1] - keys[i]) * s);
-        hintRaf = requestAnimationFrame(step);
-      };
-      hintRaf = requestAnimationFrame(step);
-    };
-    if ('IntersectionObserver' in window) {
-      const hio = new IntersectionObserver(es => { if (es[0].isIntersecting) { hio.disconnect(); setTimeout(hint, 450); } }, { threshold: 0.55 });
-      hio.observe(ph);
-    }
-  }
-
-  /* ==========================================================================
      КАК РАБОТАЮ — путь каравана: пять стоянок у колодцев, между ними следы.
      Следы «проходят» путь, когда раздел появляется на экране.
      ========================================================================== */
@@ -817,22 +967,6 @@
     const rio = new IntersectionObserver(es => { if (es[0].isIntersecting) { walkRoute(); rio.disconnect(); } }, { threshold: 0.2 });
     rio.observe(route);
   } else walkRoute();
-
-  /* ==========================================================================
-     СЛОВА
-     ========================================================================== */
-  $('#words').insertAdjacentHTML('afterbegin', '<svg class="words__rose" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#e4b45e" stroke-width=".25"><use href="#i-star"/><circle cx="12" cy="12" r="7.6"/><circle cx="12" cy="12" r="3"/></svg>');
-  $('#flips').innerHTML = S.words.map((w, i) => `
-    <button class="flip rise" type="button" aria-pressed="false" style="--rd:${(i % 3) * 0.08}s">
-      <span class="flip__in">
-        <span class="flip__face flip__front"><small>${icon('i-star')}откуда слово?</small><b>${esc(w.ru)}</b><i lang="ar" dir="rtl">${esc(w.ar)}</i></span>
-        <span class="flip__face flip__back"><i lang="ar" dir="rtl">${esc(w.ar)}</i><b>${esc(w.tr)}</b><span>${esc(w.text)}</span></span>
-      </span>
-    </button>`).join('');
-  $('#flips').addEventListener('click', e => {
-    const f = e.target.closest('.flip'); if (!f) return;
-    f.setAttribute('aria-pressed', f.getAttribute('aria-pressed') !== 'true');
-  });
 
   /* ==========================================================================
      ОТЗЫВЫ
@@ -894,13 +1028,46 @@
         <h3 class="promo__title">${esc(PR.title)}</h3>
         <p class="promo__lead">${esc(PR.lead)}</p>
         <ol class="promo__steps">${PR.steps.map(s => `<li><b>${esc(s.h)}</b><span>${esc(s.p)}</span></li>`).join('')}</ol>
-        <p class="promo__warn">${esc(PR.warn)}</p>
+        ${PR.warn ? `<p class="promo__warn">${esc(PR.warn)}</p>` : ''}
         <div class="promo__actions">
           <button class="btn btn--gold" type="button" data-promo>Хочу скидку${icon('i-arrow')}</button>
           <button class="btn btn--ghost" type="button" data-terms>Условия работы</button>
         </div>
       </div>`;
     promoEl.addEventListener('click', e => { if (e.target.closest('[data-promo]')) briefPrefill({ promo: true }); });
+  }
+
+  /* ==========================================================================
+     «НАЧНЁМ?» — табло в контактах: отсчёт 3 · 2 · 1, и на нуле слово
+     собирается из точек. Один раз — когда раздел появился на экране
+     (если ещё идёт заставка — после неё). Сама анимация — в style.css.
+     ========================================================================== */
+  /* ==========================================================================
+     ЗНАК КАЧЕСТВА — внизу страницы: крупная печать и что значит каждая буква
+     ========================================================================== */
+  const MK = S.mark, markEl = $('#mark');
+  if (MK && markEl) {
+    const group = list => '<ul class="mark__group">' + list.map(w =>
+      '<li><b>' + esc(w[0]) + '</b><span>' + esc(w[1]) + '</span><i>' + esc(w[2]) + '</i></li>').join('') + '</ul>';
+    markEl.innerHTML =
+      '<p class="sec-label">' + icon('i-mark') + '<span>' + esc(MK.label) + '</span><i lang="ar" dir="rtl">' + esc(MK.ar) + '</i></p>' +
+      '<h2 class="mark__title" id="markTitle">' + esc(MK.title).replace(esc(S.brand.name), '<span class="mark__brand">' + esc(S.brand.name) + '</span>') + '</h2>' +
+      '<p class="mark__lead">' + esc(MK.lead) + '</p>' +
+      '<div class="mark__words">' + group(MK.words.slice(0, 5)) + group(MK.words.slice(5)) + '</div>';
+  }
+
+  const board = $('#board');
+  if (board) {
+    const go = () => board.classList.add('is-go');
+    if ('IntersectionObserver' in window) {
+      const bio = new IntersectionObserver(es => {
+        if (!es[0].isIntersecting) return;
+        bio.disconnect();
+        if (root.classList.contains('is-intro')) document.addEventListener('intro:done', () => setTimeout(go, 700), { once: true });
+        else go();
+      }, { threshold: 0.6 });
+      bio.observe(board);
+    } else go();
   }
 
   /* ==========================================================================
@@ -911,7 +1078,7 @@
      сайт не может узнать, с какого аккаунта человек пишет, а бот видит.
      ========================================================================== */
   const B = S.brief, briefEl = $('#brief');
-  const brief = { what: new Set([B.what[0]]), field: null, when: null, project: null, promo: false };
+  const brief = { what: new Set([B.what[0]]), field: null, when: null, project: null, promo: false, bonuses: [] };
   let agreed = false;                                   // галочка «ознакомлен(а) с условиями»
   const SENT_KEY = 'brief-sent';
   const sentStore = {
@@ -948,6 +1115,7 @@
     if (brief.field) lines.push(`Сфера: ${lowerFirst(brief.field)}.`);
     if (brief.when) lines.push(`Сроки: ${lowerFirst(brief.when)}.`);
     if (brief.promo) lines.push('Хочу скидку за видеоотзыв и рекламу в соцсетях.');
+    if (brief.bonuses.length) lines.push('🌴 Собрал(а) финики на сайте — бонусы: ' + brief.bonuses.join('; ') + '.');
     if (agreed) lines.push('✅ С условиями работы ознакомлен(а)' + (termsLink ? ': ' + termsLink : '.'));
     lines.push('Пишу с вашего сайта-портфолио.');
     return lines.join('\n');
@@ -972,6 +1140,7 @@
     if (o.what) brief.what = new Set([o.what]);
     if ('project' in o) brief.project = o.project;
     if ('promo' in o) brief.promo = !!o.promo;
+    if (o.bonuses) brief.bonuses = o.bonuses;
     syncChips(); composeBrief();
     $('#contact').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -1076,7 +1245,7 @@
     <h3 class="terms__title" id="termsTitle">${esc(T.title)}</h3>
     <p class="terms__parties">${esc(T.parties)}</p>
     <ol class="terms__list">${T.sections.map(sec => `<li><h4>${esc(sec.h)}</h4>${sec.items.map(t => `<p>${esc(t)}</p>`).join('')}</li>`).join('')}</ol>
-    <p class="terms__contacts">${esc(T.contacts)}</p>`;
+    ${T.contacts ? `<p class="terms__contacts">${esc(T.contacts)}</p>` : ''}`;
   if (T.pdf) { $('#termsPdf').href = T.pdf; $$('.agree__pdf').forEach(x => { x.href = T.pdf; }); }
   let termsOpener = null, pendingCh = null;
   function openTerms(ch) {
@@ -1127,6 +1296,78 @@
     foot.lit(e > .96);
   }
   const footQueue = () => { if (fNear && !fRaf) fRaf = requestAnimationFrame(footUpdate); };
+
+  /* финики: нажмите на гроздь — она падает, финики разлетаются и становятся золотыми
+     монетами, выпадает бонус (data.js → dates). Через полминуты гроздь вырастает снова */
+  const DT = S.dates, fScene = $('#footScene'), dPlay = $('#datesPlay'), dHint = $('#datesHint'), dGot = $('#datesGot'), dList = $('#datesList');
+  const gotBonus = [];
+  if (DT && fScene && dPlay && DT.bonuses && DT.bonuses.length) {
+    dPlay.hidden = false;
+    dHint.textContent = '🌴 ' + DT.hint;
+    $$('.sc-bunch-hit', fScene).forEach(h => { h.setAttribute('tabindex', '0'); h.setAttribute('role', 'button'); h.setAttribute('aria-label', 'Сорвать гроздь фиников'); });
+    const first = $('.sc-palms--front .sc-bunch', fScene) || $('.sc-bunch', fScene);
+    if (first) first.classList.add('sc-bunch--hint');
+    fScene.addEventListener('click', e => { const b = e.target.closest('.sc-bunch'); if (b) dropBunch(b); });
+    fScene.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('sc-bunch-hit')) { e.preventDefault(); dropBunch(e.target.closest('.sc-bunch')); }
+    });
+    $('#datesTake').addEventListener('click', () => briefPrefill({ bonuses: gotBonus.slice() }));
+  }
+  function dropBunch(b) {
+    if (!b || b.classList.contains('is-gone')) return;
+    $$('.sc-bunch--hint', fScene).forEach(x => x.classList.remove('sc-bunch--hint'));
+    const art = $('.sc-bunch-art', b), side = +b.dataset.side || 1;
+    const fr = footer.getBoundingClientRect(), r = art.getBoundingClientRect(), sr = fScene.getBoundingClientRect();
+    const ground = sr.top - fr.top + sr.height * 0.9;             // земля у подножия пальм
+    const x = r.left - fr.left + r.width / 2;
+    b.classList.add('is-gone');
+    setTimeout(() => b.classList.remove('is-gone'), 30000);       // новая гроздь вырастет
+    const land = () => burst(x, ground);
+    if (calm || !Element.prototype.animate) return land();
+    const bb = art.getBBox(), el = document.createElement('div');
+    el.className = 'drop';
+    el.innerHTML = '<svg viewBox="' + [bb.x, bb.y, bb.width, bb.height].join(' ') + '" preserveAspectRatio="none" aria-hidden="true">' + art.innerHTML + '</svg>';
+    Object.assign(el.style, { left: (r.left - fr.left) + 'px', top: (r.top - fr.top) + 'px', width: r.width + 'px', height: r.height + 'px' });
+    footer.appendChild(el);
+    const fall = Math.max(24, ground - (r.bottom - fr.top));
+    el.animate([{ transform: 'translateY(0) rotate(0deg)' }, { transform: 'translateY(' + fall + 'px) rotate(' + side * 26 + 'deg)' }],
+      { duration: 420 + fall * 1.5, easing: 'cubic-bezier(.45,0,1,.55)', fill: 'forwards' })
+      .finished.then(() => { el.remove(); land(); }, () => { el.remove(); land(); });
+  }
+  function burst(x, y) {
+    const bonus = DT.bonuses[gotBonus.length];
+    if (!calm && Element.prototype.animate) for (let i = 0; i < 10; i++) {
+      const bit = document.createElement('i');
+      bit.className = 'date-bit'; bit.style.left = x + 'px'; bit.style.top = y + 'px';
+      footer.appendChild(bit);
+      const ang = -Math.PI * (.1 + .8 * Math.random()), v = 38 + Math.random() * 62, dx = Math.cos(ang) * v, dy = Math.sin(ang) * v;
+      bit.animate([
+        { transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+        { transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(' + Math.round((Math.random() - .5) * 320) + 'deg)', opacity: 1, offset: .42 },
+        { transform: 'translate(' + dx * 1.08 + 'px,' + (dy - 46) + 'px) scale(1.15)', opacity: 1, offset: .78 },
+        { transform: 'translate(' + dx * 1.12 + 'px,' + (dy - 78) + 'px) scale(.6)', opacity: 0 }
+      ], { duration: 1500 + Math.random() * 350, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+      setTimeout(() => bit.classList.add('is-coin'), 560);           // финик → монета
+      setTimeout(() => bit.remove(), 2000);
+    }
+    const pop = document.createElement('div');
+    pop.className = 'bonus-pop';
+    pop.textContent = bonus ? '🎁 Бонус: ' + bonus : '🌴 ' + (DT.done || 'Урожай собран');
+    footer.appendChild(pop);
+    const fw = footer.clientWidth, pw = pop.offsetWidth;
+    pop.style.left = clamp(x - pw / 2, 10, fw - pw - 10) + 'px';
+    pop.style.top = (y - 20) + 'px';
+    const drift = [{ opacity: 0, transform: 'translateY(-60%) scale(.92)' }, { opacity: 1, transform: 'translateY(-110%) scale(1)', offset: .14 },
+      { opacity: 1, transform: 'translateY(-150%)', offset: .82 }, { opacity: 0, transform: 'translateY(-190%)' }];
+    if (Element.prototype.animate) pop.animate(drift, { duration: 3200, easing: 'ease-out', fill: 'forwards' }).finished.then(() => pop.remove(), () => pop.remove());
+    else setTimeout(() => pop.remove(), 3200);
+    if (!bonus) return;
+    gotBonus.push(bonus);
+    const li = document.createElement('li'); li.textContent = bonus; dList.appendChild(li);
+    dGot.hidden = false;
+    dHint.textContent = '🌴 Собрано ' + gotBonus.length + ' из ' + DT.bonuses.length +
+      (gotBonus.length < DT.bonuses.length ? ' — сорвите ещё гроздь' : ' — все бонусы ваши');
+  }
   window.addEventListener('scroll', footQueue, { passive: true });
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(es => { fNear = es[0].isIntersecting; if (fNear) footUpdate(); }, { rootMargin: '200px 0px' }).observe(footer);

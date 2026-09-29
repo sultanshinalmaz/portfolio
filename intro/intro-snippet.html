@@ -1,0 +1,80 @@
+<!-- ===== ЗАСТАВКА SAUDI MADE: вставить сразу после <body> ===== -->
+<style>
+  #sm-intro{position:fixed;inset:0;z-index:9999;background:#efe9dc;overflow:hidden}
+  #sm-intro.gone-bg{background:transparent}
+  #sm-intro video,#sm-intro canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  #sm-intro canvas{display:none;will-change:filter,transform}
+  #sm-intro .skip{position:absolute;right:20px;bottom:20px;z-index:2;font:500 13px/1 system-ui,sans-serif;
+    color:#1f5b3a;background:rgba(255,255,255,.6);border:1px solid rgba(31,91,58,.25);
+    border-radius:999px;padding:10px 16px;cursor:pointer;backdrop-filter:blur(6px);transition:opacity .4s}
+  body.sm-lock{overflow:hidden}
+</style>
+
+<div id="sm-intro" aria-hidden="true">
+  <video muted playsinline autoplay preload="auto" poster="intro/poster.jpg">
+    <source src="intro/intro.webm" type="video/webm">
+    <source src="intro/intro.mp4" type="video/mp4">
+  </video>
+  <canvas></canvas>
+  <button class="skip" type="button">Пропустить</button>
+</div>
+
+<script>
+(function(){
+  var box=document.getElementById('sm-intro'); if(!box) return;
+  var v=box.querySelector('video'), cv=box.querySelector('canvas'), skip=box.querySelector('.skip'), done=false;
+  var DUR=2200; // длительность растворения, мс
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var seen=false; try{seen=sessionStorage.getItem('smIntro')==='1'}catch(e){}
+  function remove(){ box.remove(); document.body.classList.remove('sm-lock'); }
+  if(reduce||seen){ remove(); return; }
+  document.body.classList.add('sm-lock');
+
+  function finish(){
+    if(done) return; done=true;
+    try{sessionStorage.setItem('smIntro','1')}catch(e){}
+    skip.style.opacity=0;
+    document.body.classList.remove('sm-lock');
+    var dpr=Math.min(window.devicePixelRatio||1,1.5), W=innerWidth, H=innerHeight;
+    cv.width=W*dpr; cv.height=H*dpr;
+    var ctx=cv.getContext('2d');
+    // кадр печати во весь экран (как object-fit:cover)
+    var frame=document.createElement('canvas'); frame.width=cv.width; frame.height=cv.height;
+    try{
+      var fc=frame.getContext('2d'), vw=v.videoWidth||1280, vh=v.videoHeight||720;
+      var s=Math.max(frame.width/vw,frame.height/vh);
+      fc.drawImage(v,(frame.width-vw*s)/2,(frame.height-vh*s)/2,vw*s,vh*s);
+    }catch(e){ box.style.transition='opacity 1s'; box.style.opacity=0; setTimeout(remove,1000); return; }
+    cv.style.display='block'; v.style.display='none'; box.classList.add('gone-bg');
+
+    // клубы тумана «съедают» печать и открывают сайт позади
+    var puffs=[], n=70, D=Math.hypot(cv.width,cv.height);
+    for(var i=0;i<n;i++) puffs.push({x:Math.random()*cv.width,y:Math.random()*cv.height,
+      start:Math.random()*0.55, r:D*(0.08+Math.random()*0.16),
+      dx:(Math.random()-.5)*D*0.08, dy:(Math.random()-.5)*D*0.05});
+    var t0=performance.now();
+    function ease(x){return x<0?0:x>1?1:x*x*(3-2*x)}
+    (function tick(now){
+      var t=Math.min((now-t0)/DUR,1);
+      ctx.globalCompositeOperation='source-over';
+      ctx.clearRect(0,0,cv.width,cv.height); ctx.drawImage(frame,0,0);
+      ctx.globalCompositeOperation='destination-out';
+      for(var i=0;i<n;i++){ var p=puffs[i], k=ease((t-p.start)/(1-p.start)); if(k<=0) continue;
+        var x=p.x+p.dx*k, y=p.y+p.dy*k, r=p.r*(0.2+k*1.3);
+        var g=ctx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,'rgba(0,0,0,'+(0.9*k)+')'); g.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=g; ctx.fillRect(x-r,y-r,r*2,r*2); }
+      cv.style.opacity=1-ease((t-0.55)/0.45);            // остатки дымки тают
+      cv.style.filter='blur('+(ease(t)*10)+'px)';          // печать расплывается
+      cv.style.transform='scale('+(1+ease(t)*0.06)+')';    // и чуть уходит вперёд
+      if(t<1) requestAnimationFrame(tick); else remove();
+    })(t0);
+  }
+  v.addEventListener('ended', finish);
+  v.addEventListener('error', function(){ done=true; remove(); });
+  skip.addEventListener('click', finish);
+  var p=v.play(); if(p&&p.catch) p.catch(function(){ done=true; remove(); }); // автоплей запрещён — сразу сайт
+  setTimeout(finish, 11000); // страховка
+})();
+</script>
+<!-- ===== /ЗАСТАВКА ===== -->

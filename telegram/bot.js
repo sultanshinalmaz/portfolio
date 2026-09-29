@@ -40,7 +40,7 @@ if (fs.existsSync(envFile)) {
 }
 
 const TOKEN = process.env.BOT_TOKEN;
-const OWNER_USERNAME = (process.env.OWNER_USERNAME || 'tashbakaa').replace(/^@/, '').toLowerCase();
+const OWNER_USERNAME = (process.env.OWNER_USERNAME || '').replace(/^@/, '').toLowerCase();
 const REPEAT_DAYS = Math.max(1, +process.env.REPEAT_DAYS || 7);
 
 /* ── тексты сайта: списки заявки и работы берём прямо из data.js ────── */

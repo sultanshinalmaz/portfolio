@@ -1,0 +1,17 @@
+# Исходники видеоотзывов — сайт использует сжатые копии из assets/video
+video_*.mp4
+*.MOV
+*.mov
+
+# Бот-приёмщик заявок: токен и база заявок не публикуем
+telegram/.env
+telegram/data.json
+node_modules/
+
+# Служебное
+.claude/
+.vercel/
+*.log
+Thumbs.db
+.DS_Store
+photo_*.jpg

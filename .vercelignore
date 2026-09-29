@@ -1,0 +1,12 @@
+# На сайт в интернете уходят только index.html и assets/.
+# Инструменты, бот, локальный сервер, описания и исходники — остаются в репозитории.
+README.md
+dev-server.js
+tools/
+telegram/
+assets/fonts/_full/
+video_*.mp4
+.claude/
+assets/img/logo/logo-original.jpg
+photo_*.jpg
+intro/intro-snippet.html

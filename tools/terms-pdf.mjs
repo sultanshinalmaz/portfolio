@@ -75,7 +75,7 @@ ol.items li::before{content:counter(s) "." counter(i);position:absolute;left:-26
 <ol class="sec">${T.sections.map(s => `
   <li><h2>${esc(s.h)}</h2><ol class="items">${s.items.map(t => `<li>${esc(t)}</li>`).join('')}</ol></li>`).join('')}
 </ol>
-<div class="foot"><span>Связь: <b>${esc(T.contacts)}</b></span><span>${esc(T.owner)}</span></div>
+<div class="foot"><span>${esc(T.contacts)}</span><span>${esc(T.owner)}</span></div>
 </body></html>`;
 
 /* ---------- Chrome без окна → PDF ---------- */

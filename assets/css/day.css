@@ -30,11 +30,35 @@
 .hero__video{position:absolute;inset:0;pointer-events:none;transition:opacity 1.2s ease}
 .hero__video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.2s ease}
 .hero__video video.is-on{opacity:1}
-.hero__video.has-video::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease;
-  background:linear-gradient(180deg,rgba(6,11,24,.55) 0%,rgba(6,11,24,.2) 45%,rgba(6,11,24,.5) 100%)}
+/* переход сменяется фоном по кругу быстрее обычного — люди во дворе не двоятся */
+.hero__video video.is-swap{transition-duration:.7s}
+/* iOS в режиме энергосбережения не запускает ролики сам — без кнопки «play» поверх кадра */
+.hero__video video::-webkit-media-controls-start-playback-button{display:none!important;-webkit-appearance:none}
+/* мягкое затемнение за текстом и под шапкой — двор с зонтами остаётся светлым */
+.hero__video.has-video::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease;background:
+  radial-gradient(62% 44% at 50% 33%,rgba(6,11,24,.46),rgba(6,11,24,.12) 72%,transparent),
+  linear-gradient(180deg,rgba(6,11,24,.48) 0%,rgba(6,11,24,.08) 30%,rgba(6,11,24,0) 55%,rgba(6,11,24,.1) 100%)}
 .hero.video-on .hero__video.has-video::after{opacity:1}
-.hero.video-on .hero__moon,.hero.video-on .hero__stars{opacity:0}
 html.is-intro .hero__video{opacity:0}
+/* ролик вместо рисованной сцены — и днём, и ночью. Во время заставки оазис ещё строится
+   под печатью (звёзды, луна, рассвет), а когда заставка уходит — растворяется, и сквозь него
+   проявляется ролик: первый кадр рассвета — та же ночь с полумесяцем */
+.hero.video-on .hero__day{opacity:0;visibility:hidden}
+html:not(.is-intro) .hero.video-on .hero__moon,html:not(.is-intro) .hero.video-on .hero__stars{opacity:0}
+html:not(.is-intro) .hero.video-on .scene--hero,
+html:not(.is-intro) .hero.video-on .hero__dawn{opacity:0;visibility:hidden;transition:opacity 1.2s ease,visibility 0s linear 1.2s}
+/* кадр целиком, как в самом видео: ролик вписан в первый экран без обрезки и приближения
+   и прижат к низу (размер считает app.js → --cam-w/--cam-h). Свободное место над роликом
+   заполняет продолжение кадра (.hero__amb, canvas): верхний край ролика, растянутый и размытый;
+   сам ролик мягко растворяется в нём. Экран шире кадра — ролик во всю ширину, без полос */
+.hero.video-on .hero__video{background:#0a1224}
+.hero__amb{position:absolute;inset:0;width:100%;height:100%;filter:blur(16px) saturate(1.1);transform:scale(1.12);
+  opacity:0;transition:opacity 1.2s ease}
+.hero.video-on .hero__amb{opacity:1}
+.hero__video video.hero__vid--cam{inset:auto;left:50%;bottom:0;width:var(--cam-w,100%);height:var(--cam-h,100%);transform:translateX(-50%)}
+.hero__video.fit-top video.hero__vid--cam{-webkit-mask-image:linear-gradient(180deg,transparent,#000 5%);mask-image:linear-gradient(180deg,transparent,#000 5%)}
+/* экран шире кадра — во всю ширину, прижат к верху: луна и солнце целы, снизу срезан край двора */
+.hero__video.fit-wide video.hero__vid--cam{top:0;bottom:auto}
 
 /* ---------- палитра дня: переменные ---------- */
 html[data-theme="day"]{
@@ -44,10 +68,8 @@ html[data-theme="day"]{
 }
 /* островки, которые и днём остаются тёмными: заставка, карточка приложений,
    телефон демо, оборот карточек слов и подвал-закат */
-html[data-theme="day"] .intro,
 html[data-theme="day"] .svc__card--featured,
 html[data-theme="day"] .phone--demo,
-html[data-theme="day"] .flip__back,
 html[data-theme="day"] .footer,
 html[data-theme="day"] .mp__label{
   --text-l:#efe9dc; --muted-l:rgba(239,233,220,.74); --gold:#e4b45e; --gold-2:#f6d592; --water:#37d6c4;
@@ -57,6 +79,9 @@ html[data-theme="day"] .mp__label{
 /* ---------- шапка, переключатель, меню ---------- */
 html[data-theme="day"] .header.is-scrolled,
 html[data-theme="day"].menu-open .header{background:rgba(250,245,236,.86);box-shadow:0 1px 0 rgba(154,111,34,.2)}
+/* раскрытая шапка при наведении на знак: светлая, а над роликом — тёмная (там текст белый) */
+html[data-theme="day"] .header{--hdr-panel:rgba(250,245,236,.95)}
+html[data-theme="day"].is-hero-video:not(.menu-open) .header:not(.is-scrolled){--hdr-panel:rgba(6,11,24,.78)}
 html[data-theme="day"] .burger{border-color:rgba(21,32,58,.2);background:rgba(255,255,255,.55)}
 html[data-theme="day"] .dn{border-color:rgba(21,32,58,.18);box-shadow:inset 0 2px 5px rgba(21,32,58,.16)}
 html[data-theme="day"] .dn__day{opacity:1}
@@ -76,8 +101,23 @@ html[data-theme="day"] .hero__ar{color:rgba(143,98,18,.12)}
 html[data-theme="day"] .hero__lead{color:rgba(21,32,58,.78)}
 html[data-theme="day"] .btn--ghost{background:rgba(255,255,255,.55);border-color:rgba(21,32,58,.2)}
 html[data-theme="day"] .btn b{background:rgba(176,125,37,.14)}
-html[data-theme="day"] .hero__video.has-video::after{
-  background:linear-gradient(180deg,rgba(250,244,232,.62) 0%,rgba(250,244,232,.22) 45%,rgba(250,244,232,.1) 100%)}
+/* текст первого экрана поверх ролика — белый с тенью, кнопки на тёмной подложке:
+   читается на любом кадре, и днём, и ночью (на ярком начале заката тоже) */
+html .hero.video-on{--text-l:#fff;--muted-l:rgba(255,255,255,.9);--gold:#e4b45e;--gold-2:#f6d592}
+html .hero.video-on .hero__kicker{background:rgba(8,14,32,.5);border-color:rgba(246,213,146,.45)}
+html .hero.video-on .hero__kicker i{border-left-color:rgba(246,213,146,.45)}
+html .hero.video-on .hero__title span:not(.accent),
+html .hero.video-on .hero__lead{text-shadow:0 2px 18px rgba(0,0,0,.45)}
+html .hero.video-on .hero__title .accent{filter:drop-shadow(0 2px 12px rgba(0,0,0,.4));
+  background-image:linear-gradient(100deg,#e4b45e 0%,#f6d592 28%,#fff7e0 42%,#f6d592 52%,#e4b45e 66%,#7fdcae 100%)}
+html .hero.video-on .hero__ar{color:rgba(255,247,224,.13)}
+html .hero.video-on .hero__lead{color:rgba(255,255,255,.92)}
+html .hero.video-on .btn--ghost{background:rgba(8,14,32,.38);border-color:rgba(255,255,255,.45);color:#fff}
+html .hero.video-on .btn b{background:rgba(228,180,94,.28);color:#f6d592}
+/* шапка над роликом, пока страница не прокручена, — тоже светлая */
+html[data-theme="day"].is-hero-video:not(.menu-open) .header:not(.is-scrolled){--text-l:#fff;--muted-l:rgba(255,255,255,.88);--gold:#f6d592;color:var(--text-l)}
+html[data-theme="day"].is-hero-video:not(.menu-open) .header:not(.is-scrolled) .nav a{text-shadow:0 1px 10px rgba(0,0,0,.4)}
+html[data-theme="day"].is-hero-video:not(.menu-open) .header:not(.is-scrolled) .burger{background:rgba(8,14,32,.38);border-color:rgba(255,255,255,.45)}
 
 /* сцена оазиса днём: гранит Ухуда в дымке, золотые дюны, зелёные пальмы с финиками,
    голубая вода в каналах; свет в шатре погашен */
@@ -138,20 +178,10 @@ html[data-theme="day"] .tabs{background:rgba(21,32,58,.05);border-color:rgba(21,
 html[data-theme="day"] .demo__about li::before{color:#1f8a5b}
 html[data-theme="day"] .phone--demo{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 40px 80px -30px rgba(21,32,58,.45),0 0 0 8px rgba(176,125,37,.08)}
 
-/* ---------- подход: мираж и оазис в полуденный зной ---------- */
-html[data-theme="day"] .approach{color:var(--text-l);background:
-  radial-gradient(42% 50% at 82% 18%,rgba(31,157,143,.12),transparent 70%),
-  radial-gradient(46% 55% at 8% 92%,rgba(228,180,94,.24),transparent 70%),
-  linear-gradient(180deg,#f6ead3,#f0dbb4 55%,#f6ead3)}
-html[data-theme="day"] .approach .sec-lead{color:rgba(21,32,58,.72)}
-html[data-theme="day"] .principles li{background:rgba(255,253,248,.72);border-color:rgba(154,111,34,.2)}
-html[data-theme="day"] .principles span{color:rgba(21,32,58,.7)}
-html[data-theme="day"] .approach__touch{color:#8f6212}
-html[data-theme="day"] .mirage__phone{box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 36px 60px -26px rgba(21,32,58,.5)}
-
-/* ---------- слова ---------- */
-html[data-theme="day"] .flip__front{background:#fffdf8;border-color:rgba(154,111,34,.22);box-shadow:0 18px 36px -30px rgba(21,32,58,.35)}
-html[data-theme="day"] .words__rose{opacity:.12}
+/* ---------- «Начнём?» — табло днём: тёмное золото без свечения ---------- */
+html[data-theme="day"] .board{text-shadow:none;box-shadow:inset 0 0 0 1px rgba(154,111,34,.24);
+  background:radial-gradient(rgba(154,111,34,.2) 1px,transparent 1.6px) 0 0/9px 9px,rgba(255,253,248,.45)}
+html[data-theme="day"] .board__caret{box-shadow:none}
 
 /* ---------- контакты и заявка ---------- */
 html[data-theme="day"] .csteps li{background:rgba(255,253,248,.72);border-color:rgba(154,111,34,.2)}

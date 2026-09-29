@@ -69,7 +69,8 @@
   }
 
   /* ---------- финиковая пальма ----------
-     x, y — основание ствола; h — высота; lean — наклон кроны; s — масштаб */
+     x, y — основание ствола; h — высота; lean — наклон кроны; s — масштаб.
+     Под кроной — две грозди фиников (в подвале их можно сорвать — см. app.js) */
   function palm(x, y, h, lean, s) {
     var tx = x + lean, ty = y - h;
     var wb = 6.5 * s, wt = 3.6 * s;
@@ -95,15 +96,25 @@
       fronds += 'M' + f(tx) + ',' + f(ty) + 'Q' + f(mx + nx) + ',' + f(my + ny) + ' ' + f(ex) + ',' + f(ey) +
                 'Q' + f(mx - nx) + ',' + f(my - ny) + ' ' + f(tx) + ',' + f(ty) + 'Z';
     });
-    // грозди фиников под кроной
-    var dates = '';
-    [[-9, 10], [8, 12]].forEach(function (g) {
-      var gx = tx + g[0] * s, gy = ty + g[1] * s;
-      [[0, 0, 4.2], [-3.4, 3.6, 3.4], [3.2, 3.8, 3.4], [0, 6.4, 3]].forEach(function (c) {
-        dates += 'M' + f(gx + c[0] * s - c[2] * s) + ',' + f(gy + c[1] * s) + 'a' + f(c[2] * s) + ',' + f(c[2] * s) + ' 0 1,0 ' + f(2 * c[2] * s) + ',0a' + f(c[2] * s) + ',' + f(c[2] * s) + ' 0 1,0 ' + f(-2 * c[2] * s) + ',0Z';
+    // грозди фиников (عذق): из-под кроны выходит плодоножка, дугой уходит в сторону и вниз,
+    // на ней висит длинная кисть продолговатых плодов — как у финиковых пальм Медины
+    var k = s * 1.4;                                            // грозди чуть крупнее жизни — чтобы видно и можно нажать
+    var bunches = s < 0.7 ? [] : [-1, 1].map(function (side, bi) {
+      var bx = tx + side * 3.5 * k, by = ty + 4 * k;                 // из-под кроны
+      var ex = tx + side * (15 + bi * 2) * k, ey = ty + (19 + bi * 3) * k;   // конец плодоножки
+      var stalk = 'M' + f(bx) + ',' + f(by) + 'Q' + f(tx + side * 14 * k) + ',' + f(ty + 3 * k) + ' ' + f(ex) + ',' + f(ey);
+      var dates = '', shine = '';
+      [2, 3, 4, 4, 3, 3, 2, 1].forEach(function (cnt, ri) {
+        for (var j = 0; j < cnt; j++) {
+          var x = ex + (j - (cnt - 1) / 2) * 3 * k + side * ri * 0.45 * k, y = ey + (2 + ri * 3.3) * k;
+          var rx = 1.45 * k, ry = 2.25 * k;
+          dates += 'M' + f(x - rx) + ',' + f(y) + 'a' + f(rx) + ',' + f(ry) + ' 0 1,0 ' + f(2 * rx) + ',0a' + f(rx) + ',' + f(ry) + ' 0 1,0 ' + f(-2 * rx) + ',0Z';
+          shine += 'M' + f(x - rx * .35) + ',' + f(y - ry * .45) + 'a' + f(rx * .32) + ',' + f(ry * .3) + ' 0 1,0 ' + f(rx * .64) + ',0a' + f(rx * .32) + ',' + f(ry * .3) + ' 0 1,0 ' + f(-rx * .64) + ',0Z';
+        }
       });
+      return { side: side, stalk: stalk, dates: dates, shine: shine, cx: ex, cy: ey + 13 * k, r: 30 * k, w: 1.3 * k };
     });
-    return { trunk: trunk, rings: rings, fronds: fronds, dates: dates };
+    return { trunk: trunk, rings: rings, fronds: fronds, bunches: bunches };
   }
 
   /* ---------- куст пустыни: три-четыре пучка ---------- */
@@ -193,7 +204,15 @@
       mk('path', { class: 'sc-trunk', fill: '#0c1024', d: pl.trunk }, g);
       mk('path', { class: 'sc-rings', d: pl.rings }, g);
       var crown = mk('g', { class: 'sc-crown' }, g);
-      mk('path', { class: 'sc-dates', fill: '#24170e', d: pl.dates }, crown);
+      // грозди — под листьями; у каждой невидимая большая «цель» для пальца (в подвале по ней жмут)
+      pl.bunches.forEach(function (b) {
+        var bg = mk('g', { class: 'sc-bunch', 'data-side': b.side }, crown);
+        var art = mk('g', { class: 'sc-bunch-art' }, bg);
+        mk('path', { class: 'sc-stalk', fill: 'none', stroke: '#c98f3c', 'stroke-width': f(b.w), 'stroke-linecap': 'round', d: b.stalk }, art);
+        mk('path', { class: 'sc-dates', fill: '#a4531c', d: b.dates }, art);
+        mk('path', { class: 'sc-dates-shine', fill: '#e6a653', d: b.shine }, art);
+        mk('circle', { class: 'sc-bunch-hit', fill: 'transparent', cx: f(b.cx), cy: f(b.cy), r: f(b.r) }, bg);
+      });
       mk('path', { class: 'sc-frond', fill: '#0e1826', d: pl.fronds }, crown);
     }
     // по краям, на песке перед дюнами (видно на широком экране)
