@@ -4,7 +4,7 @@
    если играет — на <html> класс is-intro, он прячет шапку и текст первого экрана.
    Когда печать начинает растворяться (событие sm-intro:finish), сайт открывается:
    is-intro снимается — шапка и текст поднимаются на место, — и приходит событие
-   intro:done (по нему, например, начинается рассвет). Страховка — 15 с.
+   intro:done (по нему, например, начинается рассвет). Страховка — 40 с.
    Пришли по ссылке на раздел (сайт/#contact) — после заставки плавно едем к нему.
    ========================================================================== */
 (function () {
@@ -37,5 +37,14 @@
   document.addEventListener('sm-intro:finish', finish);
   // заставка уже закончилась (или её нет) до того, как сюда дошла очередь
   if (window.smIntroDone || !document.getElementById('sm-intro')) finish();
-  setTimeout(finish, 15000);
+  // страховка: заставка ждёт, пока страницу покажут, поэтому не спешим — открываем сайт, когда
+  // заставки уже нет, а через 40 с убираем её сами, что бы с ней ни случилось
+  var t0 = Date.now();
+  (function watch() {
+    if (finished) return;
+    var box = document.getElementById('sm-intro');
+    if (box && Date.now() - t0 < 40000) return setTimeout(watch, 3000);
+    if (box) { box.remove(); document.body.classList.remove('sm-lock'); }
+    finish();
+  })();
 })();

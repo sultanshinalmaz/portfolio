@@ -160,7 +160,7 @@
 
 <div id="sm-intro" aria-hidden="true">
   <canvas class="paper"></canvas>
-  <video muted playsinline autoplay preload="auto" poster="intro/poster.jpg">
+  <video muted playsinline preload="auto" poster="intro/poster.jpg">
     <source src="intro/intro.webm" type="video/webm">
     <source src="intro/intro.mp4" type="video/mp4">
   </video>
@@ -281,7 +281,7 @@
   }
   function finish(){
     if(done) return;
-    follow(); done=true; clearInterval(followT);
+    follow(); done=true; clearInterval(followT); clearInterval(tick);
     removeEventListener('resize',frameVideo);
     skip.style.opacity=0;
     document.body.classList.remove('sm-lock');
@@ -330,14 +330,43 @@
     })(t0);
   }
   // без ролика — сразу сайт (лист плавно гаснет)
-  function bail(){ if(done) return; done=true; clearInterval(followT); open();
+  function bail(){ if(done) return; done=true; clearInterval(followT); clearInterval(tick); open();
     box.style.transition='opacity .6s'; box.style.opacity=0; setTimeout(remove,650); }
   v.addEventListener('ended', finish);
   v.addEventListener('error', bail);
   skip.addEventListener('click', finish);
-  var p=v.play(); if(p&&p.catch) p.catch(bail);                  // автоплей запрещён
-  setTimeout(function(){ if(v.currentTime<0.05) bail(); }, 4500); // ролик так и не пошёл (медленная сеть)
-  setTimeout(finish, 11000); // страховка
+
+  // Ролик стартует с начала, только когда страницу действительно видно. Раньше он шёл сам (autoplay),
+  // как только загрузится: открыли из мессенджера или страница ещё показывалась — удар штампа
+  // проходил за кадром, и человек видел уже готовый оттиск. «Видно» — пришли кадры отрисовки
+  // (в фоне requestAnimationFrame молчит). Свернули страницу — пауза, вернулись — дальше.
+  var shown=0, started=false, hid=false, lastT=-1, moved=0;
+  function onShow(){ requestAnimationFrame(function(){ requestAnimationFrame(function(){ if(!shown) shown=performance.now(); step(); }); }); }
+  function step(){
+    if(done||!shown||hid) return;
+    var now=performance.now();
+    if(!started){
+      if(now-shown<350) return;                                   // дать окну браузера доехать (открыли из Telegram)
+      started=true; moved=now;
+      try{ if(v.currentTime>0) v.currentTime=0; }catch(e){}
+      var p=v.play(); if(p&&p.catch) p.catch(bail);               // автоплей запрещён — сразу сайт
+      return;
+    }
+    if(v.currentTime!==lastT){ lastT=v.currentTime; moved=now; return; }
+    if(lastT<0.05){ if(now-moved>4500) bail(); }                  // так и не пошёл (медленная сеть) — сразу сайт
+    else if(now-moved>3500) finish();                             // застрял — растворяем то, что есть
+  }
+  var tick=setInterval(step,200);
+  document.addEventListener('visibilitychange',function(){
+    if(done) return;
+    hid=document.visibilityState==='hidden';
+    if(hid){ if(started) v.pause(); return; }
+    if(!started) return onShow();
+    moved=performance.now(); var q=v.play(); if(q&&q.catch) q.catch(function(){});
+  });
+  onShow();
+  // кадров так и не было (часть webview всегда «в фоне») — убираем заставку, чтобы сайт не висел
+  setTimeout(function(){ if(!shown&&!done){ done=true; clearInterval(followT); clearInterval(tick); open(); remove(); } },12000);
 })();
 </script>
 <!-- ===== /ЗАСТАВКА ===== -->
@@ -605,12 +634,13 @@
       <p class="dates-play__hint" id="datesHint" aria-live="polite"></p>
     </div>
   </div>
-  <!-- собранные бонусы — поверх неба над пальмами, ничего не сдвигая -->
-  <div class="dates-anchor"><div class="dates-play__got" id="datesGot" hidden>
-    <ul class="dates-play__list" id="datesList"></ul>
-    <button class="btn btn--gold btn--sm" type="button" id="datesTake">Забрать в заявку</button>
-  </div></div>
   <div class="scene scene--footer" id="footScene" aria-hidden="true"></div>
+  <!-- собранные бонусы — под пальмами, столбиком: финики падают вниз, бонусы копятся внизу.
+       Сцена при этом не сдвигается — страница сама докручивает к новому бонусу -->
+  <div class="dates-got" id="datesGot" hidden>
+    <ul class="dates-got__list" id="datesList"></ul>
+    <button class="btn btn--gold btn--sm" type="button" id="datesTake">Забрать в заявку</button>
+  </div>
 </footer>
 
 <!-- ================= КЕЙС (окно) ================= -->

@@ -866,14 +866,17 @@ html:not(.rm) .board.is-go .board__caret{animation:caret 1.1s steps(1) 2.4s infi
 .dates-play{display:grid;justify-items:center;gap:10px;margin-top:6px}
 .dates-play__hint{display:inline-flex;align-items:center;gap:8px;margin:0;padding:8px 14px;border-radius:99px;text-align:center;
   background:rgba(228,180,94,.12);border:1px solid rgba(228,180,94,.32);font:600 13.5px/1.35 var(--f-body);color:var(--gold-2)}
-.dates-anchor{position:relative;z-index:3;height:0}
-.dates-play__got{position:absolute;left:0;right:0;top:6px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 12px;pointer-events:none}
-.dates-play__got>*{pointer-events:auto}
-.dates-play__list{display:flex;gap:6px;max-width:100%;margin:0;padding:0 2px;list-style:none;overflow-x:auto;scrollbar-width:none}
-.dates-play__list::-webkit-scrollbar{display:none}
-.dates-play__list li{flex:none;padding:6px 11px;background-color:rgba(8,14,32,.72)!important;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(228,180,94,.28);
-  font:500 13px/1.3 var(--f-body);color:var(--text-l)}
-.dates-play__list li::before{content:"🎁 "}
+/* собранные бонусы — под пальмами, столбиком; фон — продолжение земли сцены (низ её градиента) */
+.dates-got{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:-1px;
+  padding:10px 16px 28px;background:#131438}
+.dates-got[hidden]{display:none}
+.dates-got__list{display:flex;flex-direction:column;gap:8px;width:min(100%,460px);margin:0;padding:0;list-style:none}
+.dates-got__list li{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:14px;text-align:left;
+  background:rgba(255,255,255,.06);border:1px solid rgba(228,180,94,.3);font:500 14px/1.4 var(--f-body);color:var(--text-l);
+  animation:gotIn .5s cubic-bezier(.2,.7,.3,1) both}
+.dates-got__list li::before{content:"🎁";flex:none}
+@keyframes gotIn{from{opacity:0;transform:translateY(-10px)}}
+html.rm .dates-got__list li{animation:none}
 /* падающая гроздь, разлетающиеся финики → золотые монеты, надпись бонуса */
 .drop{position:absolute;z-index:5;pointer-events:none;transform-origin:50% 0}
 .drop svg{display:block;width:100%;height:100%;overflow:visible}

@@ -1419,6 +1419,8 @@
     gotBonus.push(bonus);
     const li = document.createElement('li'); li.textContent = bonus; dList.appendChild(li);
     dGot.hidden = false;
+    // список растёт вниз под пальмами — докручиваем, чтобы новый бонус и кнопка были на экране
+    requestAnimationFrame(() => $('#datesTake').scrollIntoView({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' }));
     dHint.textContent = '🌴 Собрано ' + gotBonus.length + ' из ' + DT.bonuses.length +
       (gotBonus.length < DT.bonuses.length ? ' — сорвите ещё гроздь' : ' — все бонусы ваши');
   }
