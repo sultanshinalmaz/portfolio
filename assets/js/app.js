@@ -20,7 +20,15 @@
   const waUrl = t => 'https://wa.me/' + C.whatsapp + (t ? '?text=' + encodeURIComponent(t) : '');
 
   /* ---------- простые подстановки ---------- */
-  $$('[data-bind]').forEach(el => { const v = get(S, el.dataset.bind); if (v != null) el.textContent = v; });
+  // data-nobr — слова через дефис не рвутся по строкам («мини-» / «приложения»): после дефиса
+  // между буквами ставим невидимый «соединитель слов» (U+2060)
+  const WJ = String.fromCharCode(0x2060);
+  $$('[data-bind]').forEach(el => {
+    let v = get(S, el.dataset.bind);
+    if (v == null) return;
+    if (el.hasAttribute('data-nobr')) v = String(v).replace(/(\p{L})-(?=\p{L})/gu, '$1-' + WJ);
+    el.textContent = v;
+  });
   const title = $('[data-hero-title]');
   if (title) title.innerHTML = S.hero.title.map((t, i, a) => `<span${i === a.length - 1 ? ' class="accent"' : ''}>${esc(t)}</span>`).join('');
   $$('[data-year]').forEach(el => { el.textContent = new Date().getFullYear(); });

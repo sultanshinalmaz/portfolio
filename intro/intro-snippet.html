@@ -11,10 +11,7 @@
 </style>
 
 <div id="sm-intro" aria-hidden="true">
-  <video muted playsinline autoplay preload="auto" poster="intro/poster.jpg">
-    <source src="intro/intro.webm" type="video/webm">
-    <source src="intro/intro.mp4" type="video/mp4">
-  </video>
+  <video muted playsinline preload="auto"></video>
   <canvas></canvas>
   <button class="skip" type="button">Пропустить</button>
 </div>
@@ -23,6 +20,11 @@
 (function(){
   var box=document.getElementById('sm-intro'); if(!box) return;
   var v=box.querySelector('video'), cv=box.querySelector('canvas'), skip=box.querySelector('.skip'), done=false;
+  // телефон (вертикальный экран) — своя версия видео
+  var mob=window.matchMedia&&matchMedia('(max-aspect-ratio: 1/1)').matches, sfx=mob?'-mobile':'';
+  v.poster='intro/poster'+sfx+'.jpg';
+  var canWebm=v.canPlayType('video/webm; codecs="vp9"');
+  v.src='intro/intro'+sfx+(canWebm?'.webm':'.mp4');
   var DUR=2200; // длительность растворения, мс
   var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   var seen=false; try{seen=sessionStorage.getItem('smIntro')==='1'}catch(e){}

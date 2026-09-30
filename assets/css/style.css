@@ -190,7 +190,7 @@ html.is-intro .dn{visibility:hidden}
   font:400 clamp(120px,36vw,300px)/1 var(--f-ar);color:rgba(246,213,146,.09);
   clip-path:inset(0 0 0 0);transition:clip-path 2.2s cubic-bezier(.6,.05,.25,1) .5s}
 html.is-intro .hero__ar{clip-path:inset(-20% 0 -20% 100%)}
-.hero__lead{margin:18px auto 0;max-width:620px;font-size:clamp(15px,1.45vw,18px);line-height:1.6;color:var(--muted-l)}
+.hero__lead{margin:18px auto 0;max-width:42em;font-size:clamp(15px,1.45vw,18px);line-height:1.6;color:var(--muted-l)}
 .hero__cta{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:26px}
 @media (max-width:899px){
   .hero__kicker{margin-bottom:14px;padding:7px 12px}
@@ -724,7 +724,9 @@ html.is-skipped .scene--hero *{animation:none!important;transition:none!importan
 .contact__in{display:grid;gap:36px;align-items:start}
 /* «Начнём?» — табло. Отсчёт 3 · 2 · 1, на нуле слово собирается из точек. Шрифт Handjet,
    ось ELSH: 0 — пусто, 14 (при ELGR 2) — россыпь точек, 2 — сплошные «пиксели».
-   Один раз, когда раздел на экране; потом мигает курсор — ждёт заявку */
+   Один раз, когда раздел на экране; потом мигает курсор — ждёт заявку.
+   До своей очереди буквы и цифры спрятаны ещё и прозрачностью: браузер, который не применил ось
+   шрифта (шрифт не успел, экономия трафика), иначе показал бы слово поверх отсчёта */
 .board{position:relative;display:inline-flex;align-items:flex-end;margin:0 0 20px;padding:.12em .2em .08em;border-radius:18px;
   font:600 clamp(66px,17vw,124px)/.92 var(--f-num);color:var(--gold-2);text-shadow:0 0 .2em rgba(246,213,146,.4);
   background:radial-gradient(rgba(228,180,94,.17) 1px,transparent 1.6px) 0 0/9px 9px,rgba(255,255,255,.025);
@@ -737,23 +739,31 @@ html.is-skipped .scene--hero *{animation:none!important;transition:none!importan
   box-shadow:0 0 .18em rgba(246,213,146,.5);animation:caret 1.1s steps(1) infinite}
 @keyframes caret{0%{opacity:0}50%{opacity:1}}
 /* табло играет, если сайт не в режиме «меньше движения» (html.rm — data.js → motion: 'respect') */
-html.js:not(.rm) .board:not(.is-go) .board__word i{font-variation-settings:"ELSH" 0,"ELGR" 2}
+html.js:not(.rm) .board:not(.is-go) .board__word i{font-variation-settings:"ELSH" 0,"ELGR" 2;opacity:0}
 html.js:not(.rm) .board:not(.is-go) .board__caret{animation:none;opacity:0}
 html:not(.rm) .board.is-go .board__count{display:block}
 html:not(.rm) .board.is-go .board__count i{animation:boardNum .5s ease-in-out both}
 html:not(.rm) .board.is-go .board__count i:nth-child(2){animation-delay:.5s}
 html:not(.rm) .board.is-go .board__count i:nth-child(3){animation-delay:1s}
-html:not(.rm) .board.is-go .board__word i{animation:boardIn .8s cubic-bezier(.3,.7,.2,1) calc(1.5s + var(--i) * 75ms) both}
+html:not(.rm) .board.is-go .board__word i{animation:boardIn .8s cubic-bezier(.3,.7,.2,1) 1.5s both}
+html:not(.rm) .board.is-go .board__word i:nth-child(2){animation-delay:1.575s}
+html:not(.rm) .board.is-go .board__word i:nth-child(3){animation-delay:1.65s}
+html:not(.rm) .board.is-go .board__word i:nth-child(4){animation-delay:1.725s}
+html:not(.rm) .board.is-go .board__word i:nth-child(5){animation-delay:1.8s}
+html:not(.rm) .board.is-go .board__word i:nth-child(6){animation-delay:1.875s}
+html:not(.rm) .board.is-go .board__word i:nth-child(7){animation-delay:1.95s}
 html:not(.rm) .board.is-go .board__caret{animation:caret 1.1s steps(1) 2.4s infinite backwards}
 @keyframes boardNum{
-  0%{opacity:1;font-variation-settings:"ELSH" 0,"ELGR" 2}
+  0%{opacity:0;font-variation-settings:"ELSH" 0,"ELGR" 2}
+  6%{opacity:1}
   35%{opacity:1;font-variation-settings:"ELSH" 14,"ELGR" 2}
   62%,82%{opacity:1;font-variation-settings:"ELSH" 2,"ELGR" 1}
   100%{opacity:0;font-variation-settings:"ELSH" 0,"ELGR" 1}}
 @keyframes boardIn{
-  0%{font-variation-settings:"ELSH" 0,"ELGR" 2}
+  0%{opacity:0;font-variation-settings:"ELSH" 0,"ELGR" 2}
+  12%{opacity:1}
   50%{font-variation-settings:"ELSH" 14,"ELGR" 2}
-  100%{font-variation-settings:"ELSH" 2,"ELGR" 1}}
+  100%{opacity:1;font-variation-settings:"ELSH" 2,"ELGR" 1}}
 .contact__main .sec-lead{margin-bottom:26px}
 /* как отправить заявку — три шага слева */
 .csteps{display:grid;gap:12px;margin:0;padding:0;list-style:none;counter-reset:cs}
