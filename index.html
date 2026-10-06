@@ -168,8 +168,10 @@
   // вертикальный экран (телефон) — своя версия ролика 9:16, горизонтальный — 16:9; обе во весь экран.
   // Ролик задаём здесь, а не в разметке: иначе браузер начал бы качать обе версии
   var mob=!!(window.matchMedia&&matchMedia('(max-aspect-ratio: 1/1)').matches), sfx=mob?'-mobile':'';
-  v.poster='intro/poster'+sfx+'.jpg';
-  v.src='intro/intro'+sfx+(v.canPlayType('video/webm; codecs="vp9"')?'.webm':'.mp4');
+  // версия роликов: заменили файлы в intro/ — поменяйте, иначе браузер покажет прежние (на reg.ru видео хранятся 30 дней)
+  var ver='?v=20261006';
+  v.poster='intro/poster'+sfx+'.jpg'+ver;
+  v.src='intro/intro'+sfx+(v.canPlayType('video/webm; codecs="vp9"')?'.webm':'.mp4')+ver;
 
   // кадр «во весь экран», как object-fit: cover, — чтобы растворять ровно то, что было на экране
   function cover(W,H,vw,vh){ var s=Math.max(W/vw,H/vh), w=vw*s, h=vh*s; return {x:(W-w)/2,y:(H-h)/2,w:w,h:h}; }
