@@ -722,6 +722,8 @@ html.is-skipped .scene--hero *{animation:none!important;transition:none!importan
   radial-gradient(80% 50% at 50% 110%,rgba(255,183,112,.28),transparent 70%),
   radial-gradient(40% 40% at 0% 0%,rgba(47,163,111,.12),transparent 70%),var(--night)}
 .contact__in{display:grid;gap:36px;align-items:start}
+/* колонки не растягиваются длинным содержимым (ссылка в сообщении и т. п.) шире экрана */
+.contact__in>*{min-width:0}
 /* «Начнём?» — табло. Отсчёт 3 · 2 · 1, на нуле слово собирается из точек. Шрифт Handjet,
    ось ELSH: 0 — пусто, 14 (при ELGR 2) — россыпь точек, 2 — сплошные «пиксели».
    Один раз, когда раздел на экране; потом мигает курсор — ждёт заявку.
@@ -788,7 +790,7 @@ html:not(.rm) .board.is-go .board__caret{animation:caret 1.1s steps(1) 2.4s infi
 .bchip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#1b1205}
 .brief__msg{position:relative;margin:18px 0 16px;padding:12px 14px 14px;border-radius:18px 18px 18px 6px;background:#1d2a47}
 .brief__msg-h{display:block;margin-bottom:4px;font:500 10px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:#8c9ab5}
-.brief__msg p{margin:0;font-size:14.5px;line-height:1.55;white-space:pre-line}
+.brief__msg p{margin:0;font-size:14.5px;line-height:1.55;white-space:pre-line;overflow-wrap:anywhere}
 /* проверка «не бот» — нажать на названный знак */
 .human{margin:0 0 16px;padding:14px 14px 12px;border-radius:18px;border:1px dashed rgba(228,180,94,.4);background:rgba(6,11,24,.35)}
 .human__q{margin:0 0 10px;font-size:14px;line-height:1.45;color:var(--text-l)}
@@ -823,6 +825,8 @@ html:not(.rm) .board.is-go .board__caret{animation:caret 1.1s steps(1) 2.4s infi
 
 .brief__send{display:flex;flex-wrap:wrap;gap:10px}
 .brief__send .btn{flex:1 1 150px}
+/* на телефоне кнопки всегда друг под другом: сверху Telegram, ниже WhatsApp — и до галочки, и после */
+@media (max-width:559px){ .brief__send .btn{flex-basis:100%} }
 .brief__note{margin:14px 0 0;font-size:12.5px;line-height:1.5;color:var(--muted-l)}
 @media (min-width:960px){ .contact__in{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:64px} .brief{padding:30px 28px} }
 
