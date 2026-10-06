@@ -1,0 +1,39 @@
+name: Выкладка на reg.ru
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-regru
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Загрузка сайта на хостинг по FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          server-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .github/**
+            README.md
+            dev-server.js
+            vercel.json
+            .vercelignore
+            tools/**
+            telegram/**
+            assets/fonts/_full/**
+            assets/img/logo/logo-original.jpg
+            intro/intro-snippet.html

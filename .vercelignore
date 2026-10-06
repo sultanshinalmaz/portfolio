@@ -10,3 +10,6 @@ video_*.mp4
 assets/img/logo/logo-original.jpg
 photo_*.jpg
 intro/intro-snippet.html
+# только для reg.ru
+.htaccess
+.github/
