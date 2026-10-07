@@ -62,6 +62,7 @@
   window.addEventListener('load', () => fitHero(true));
 
   const projects = S.projects.filter(p => !p.hidden);
+  const charity = (S.charity || []).filter(p => !p.hidden);     // сайты садака джария — свой блок после работ
 
   /* Куда ведёт «Открыть сайт».
      На вашем компьютере — свежая версия из папки проекта: сразу видно всё, что вы
@@ -76,6 +77,24 @@
     }
     return p.live || '';
   }
+
+  /* Посещаемость без cookie (папка «Статистика сайтов»): при открытии — один «+1» с адресом сайта,
+     с которого пришли (только домен), и меткой utm_source. Больше ничего не отправляется и не хранится.
+     ?nostats — не считать этот браузер (владельцу), ?stats-on — снова считать.
+     На своём компьютере не считаем (для проверки — ?stats-test). */
+  (function countVisit() {
+    const url = S.stats && S.stats.hit, q = location.search;
+    if (!url || !navigator.sendBeacon) return;
+    try {
+      if (/[?&]nostats\b/.test(q)) localStorage.setItem('sm-nostats', '1');
+      if (/[?&]stats-on\b/.test(q)) localStorage.removeItem('sm-nostats');
+      if (localStorage.getItem('sm-nostats')) return;
+    } catch (e) {}
+    if (isLocal && !/[?&]stats-test\b/.test(q)) return;
+    let ref = ''; try { ref = document.referrer ? new URL(document.referrer).hostname : ''; } catch (e) {}
+    const utm = (new URLSearchParams(q).get('utm_source') || '').slice(0, 40);
+    navigator.sendBeacon(url, new Blob([JSON.stringify({ r: ref, u: utm })], { type: 'text/plain' }));
+  })();
   const openBtn = (p, cls) => siteHref(p)
     ? `<a class="btn ${cls}" href="${esc(siteHref(p))}" target="_blank" rel="noopener">Открыть сайт${icon('i-ext')}</a>`
     : '<span class="btn btn--soon">Скоро онлайн</span>';
@@ -557,7 +576,7 @@
     return n ? `<button class="chip${f.id === 'all' ? ' is-on' : ''}" role="tab" aria-selected="${f.id === 'all'}" data-f="${f.id}">${esc(f.label)} <small>${n}</small></button>` : '';
   }).join('');
 
-  grid.innerHTML = projects.map(p => `
+  const cardHtml = p => `
     <article class="wcard rise" style="--accent:${esc(p.accent)}" data-slug="${esc(p.slug)}">
       <button class="wcard__stage" type="button" data-case="${esc(p.slug)}" aria-label="Подробнее о проекте ${esc(p.title)}">
         <span class="browser"><span class="browser__bar"><i></i><i></i><i></i><span></span></span>
@@ -575,9 +594,32 @@
           <button class="btn btn--line btn--sm" type="button" data-case="${esc(p.slug)}">Подробнее</button>
         </div>
       </div>
-    </article>`).join('');
+    </article>`;
+  // последней — карточка-приглашение «Здесь может быть ваш сайт»: тянется до конца ряда, чтобы сетка была ровной
+  grid.innerHTML = projects.map(cardHtml).join('') + `
+    <article class="wcard wcard--you rise">
+      <button class="wcard__stage" type="button" data-you aria-label="Обсудить ваш сайт">
+        <span class="browser"><span class="browser__bar"><i></i><i></i><i></i><span>ваш-сайт.рф</span></span>
+          <span class="you__screen"><b>Ваш сайт</b><em>может быть здесь</em></span></span>
+      </button>
+      <div class="wcard__body">
+        <p class="wcard__meta"><i></i>Следующая работа</p>
+        <h3 class="wcard__title">Здесь может быть ваш сайт</h3>
+        <p class="wcard__sum">Расскажите о своём деле — сделаю сайт со своей историей и своим узором, как у работ выше.</p>
+        <div class="wcard__actions"><button class="btn btn--gold btn--sm" type="button" data-you>Обсудить мой сайт${icon('i-arrow')}</button></div>
+      </div>
+    </article>`;
+  const charityGrid = $('#charityGrid');
+  if (charityGrid) charityGrid.innerHTML = charity.map(cardHtml).join('');
 
-  const cards = $$('.wcard', grid);
+  const cards = $$('.wcard[data-slug]', grid), youCard = $('.wcard--you', grid);
+  const allCards = cards.concat(charityGrid ? $$('.wcard', charityGrid) : []);
+  function placeYou() {
+    const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+    const rest = cards.filter(c => !c.classList.contains('is-hidden')).length % cols, span = rest ? cols - rest : cols;
+    youCard.style.gridColumn = span > 1 ? `span ${span}` : '';
+    youCard.classList.toggle('is-wide', span > 1);
+  }
 
   function applyFilter() {
     const f = S.filters.find(x => x.id === filter);
@@ -592,7 +634,8 @@
     const total = filter === 'all' ? projects.length : shown;
     moreBtn.parentElement.hidden = !(filter === 'all' && !expanded && total > FIRST);
     moreBtn.textContent = `Показать все ${projects.length} ${plural(projects.length, ['работу', 'работы', 'работ'])}`;
-    requestAnimationFrame(() => { reveal(grid); measureAll(); });
+    placeYou();
+    requestAnimationFrame(() => { reveal(grid); if (charityGrid) reveal(charityGrid); measureAll(); });
     setTimeout(revealVisible, 400);
   }
   filtersEl.addEventListener('click', e => {
@@ -637,7 +680,7 @@
     }
     shotAnims.set(card, a);
   }
-  function buildShots() { cards.forEach(c => { if (!c.classList.contains('is-hidden')) buildShot(c); }); }
+  function buildShots() { allCards.forEach(c => { if (!c.classList.contains('is-hidden')) buildShot(c); }); }
   function runShots(on) {
     if (on === shotsOn) return;
     shotsOn = on;
@@ -650,23 +693,26 @@
     }
   }
   const measureAll = buildShots;               // вызывается после фильтра и «Показать все»
-  cards.forEach(c => { $('.phone__shot', c).addEventListener('load', () => buildShot(c)); });
-  let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(buildShots, 200); });
+  allCards.forEach(c => { $('.phone__shot', c).addEventListener('load', () => buildShot(c)); });
+  let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { buildShots(); placeYou(); }, 200); });
 
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(es => runShots(es[0].isIntersecting), { rootMargin: '120px 0px' }).observe(grid);
+    const seen = new Set();                 // телефоны едут, пока на экране сетка работ или садака джария
+    const io = new IntersectionObserver(es => { es.forEach(e => e.isIntersecting ? seen.add(e.target) : seen.delete(e.target)); runShots(seen.size > 0); }, { rootMargin: '120px 0px' });
+    io.observe(grid); if (charityGrid) io.observe(charityGrid);
   } else runShots(true);
 
   /* ---------- окно кейса ---------- */
   const caseEl = $('#case'), caseBox = $('.case__box', caseEl), caseStage = $('#caseStage'), caseBody = $('#caseBody');
-  let caseIdx = -1, caseOpener = null;
+  let caseIdx = -1, caseOpener = null, caseList = projects;
 
   function openCase(slug, opener) {
-    const i = projects.findIndex(p => p.slug === slug);
+    const list = charity.some(p => p.slug === slug) ? charity : projects;
+    const i = list.findIndex(p => p.slug === slug);
     if (i < 0) return;
-    caseIdx = i;
-    const p = projects[i];
-    const prev = projects[(i - 1 + projects.length) % projects.length], next = projects[(i + 1) % projects.length];
+    caseIdx = i; caseList = list;
+    const p = list[i];
+    const prev = list[(i - 1 + list.length) % list.length], next = list[(i + 1) % list.length];
     caseBox.style.setProperty('--accent', p.accent);
     caseStage.innerHTML = `
       <span class="browser"><span class="browser__bar"><i></i><i></i><i></i><span></span></span>
@@ -685,7 +731,7 @@
         ${openBtn(p, 'btn--dark')}
         <button class="btn btn--line" type="button" data-like="${esc(p.slug)}">Хочу похожий</button>
       </div>
-      <div class="case__nav">
+      <div class="case__nav"${list.length < 2 ? ' hidden' : ''}>
         <button type="button" data-go="-1">${icon('i-left')}${esc(prev.title)}</button>
         <button type="button" data-go="1">${esc(next.title)}${icon('i-left')}</button>
       </div>`;
@@ -703,19 +749,23 @@
     root.classList.remove('menu-open');
     if (caseOpener && caseOpener.focus) caseOpener.focus({ preventScroll: true });
   }
-  grid.addEventListener('click', e => { const b = e.target.closest('[data-case]'); if (b) openCase(b.dataset.case, b); });
+  grid.addEventListener('click', e => {
+    if (e.target.closest('[data-you]')) return briefPrefill({ what: 'Сайт' });
+    const b = e.target.closest('[data-case]'); if (b) openCase(b.dataset.case, b);
+  });
+  if (charityGrid) charityGrid.addEventListener('click', e => { const b = e.target.closest('[data-case]'); if (b) openCase(b.dataset.case, b); });
   caseEl.addEventListener('click', e => {
     if (e.target.closest('[data-close]')) return closeCase();
     const like = e.target.closest('[data-like]');
     if (like) { closeCase(); return briefPrefill({ what: 'Сайт', project: like.dataset.like }); }
     const g = e.target.closest('[data-go]');
-    if (g) openCase(projects[(caseIdx + +g.dataset.go + projects.length) % projects.length].slug);
+    if (g) openCase(caseList[(caseIdx + +g.dataset.go + caseList.length) % caseList.length].slug);
   });
   document.addEventListener('keydown', e => {
     if (caseEl.hidden) return;
     if (e.key === 'Escape') closeCase();
-    if (e.key === 'ArrowRight') openCase(projects[(caseIdx + 1) % projects.length].slug);
-    if (e.key === 'ArrowLeft') openCase(projects[(caseIdx - 1 + projects.length) % projects.length].slug);
+    if (caseList.length > 1 && e.key === 'ArrowRight') openCase(caseList[(caseIdx + 1) % caseList.length].slug);
+    if (caseList.length > 1 && e.key === 'ArrowLeft') openCase(caseList[(caseIdx - 1 + caseList.length) % caseList.length].slug);
   });
 
   applyFilter();

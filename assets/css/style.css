@@ -357,6 +357,41 @@ html.is-skipped .scene--hero *{animation:none!important;transition:none!importan
 .tags li{padding:6px 10px;border-radius:99px;background:#f3eee4;color:#3d4456;font-size:12px;font-weight:600;line-height:1.2}
 .wcard__actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:10px}
 
+/* три в ряд на широком экране — карточки компактнее */
+@media (min-width:1100px){
+  .work__grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+  .work__grid .wcard__body{gap:8px;padding:16px 16px 18px}
+  .work__grid .wcard__title{font-size:22px}
+  .work__grid .wcard__sum{font-size:14px;line-height:1.55}
+  .work__grid .tags li{padding:5px 9px;font-size:11px}
+  .work__grid .wcard .phone{width:26%}
+}
+
+/* карточка-приглашение «Здесь может быть ваш сайт» — последняя в сетке, тянется до конца ряда */
+.wcard--you{--accent:#e4b45e;background:rgba(255,255,255,.55);border:2px dashed rgba(154,111,34,.45);box-shadow:none}
+.wcard--you .wcard__stage{background:radial-gradient(120% 100% at 15% 0%,#5a4520 0%,#0b1428 70%)}
+.wcard--you .browser{left:11%;top:13%;width:78%}
+.wcard--you .browser__bar span{display:flex;align-items:center;height:70%;padding-left:8px;color:#8a93ad;
+  font:500 clamp(7px,.75vw,10px)/1 var(--f-mono);white-space:nowrap;overflow:hidden}
+.you__screen{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;aspect-ratio:16/10;color:#f5efe2;
+  background:repeating-linear-gradient(135deg,rgba(228,180,94,.07) 0 12px,transparent 12px 24px),#101a30}
+.you__screen b{font:700 clamp(22px,2.6vw,34px)/1 var(--f-display)}
+.you__screen em{font:500 clamp(9px,.9vw,12px)/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:#e4b45e;font-style:normal}
+.wcard--you .btn svg{width:16px;height:16px}
+@media (min-width:760px){
+  .wcard--you.is-wide{flex-direction:row}
+  .wcard--you.is-wide .wcard__stage{flex:0 0 46%;aspect-ratio:auto;min-height:250px}
+  .wcard--you.is-wide .wcard__body{justify-content:center;padding:28px 34px}
+  .wcard--you.is-wide .wcard__title{font-size:clamp(26px,2.6vw,34px)}
+  .wcard--you.is-wide .wcard__sum{max-width:34em;font-size:15px}
+  .wcard--you.is-wide .wcard__actions{margin-top:6px}
+}
+
+/* сайты садака джария — сразу после работ, той же светлой подложкой; отделены тонкой линией */
+.charity{padding-top:clamp(56px,7vw,96px)}
+.charity::before{content:"";position:absolute;top:0;left:50%;width:min(1200px,100% - 32px);height:1px;transform:translateX(-50%);
+  background:linear-gradient(90deg,transparent,rgba(154,111,34,.35),transparent)}
+
 /* ==========================================================================
    КЕЙС — окно проекта
    ========================================================================== */

@@ -258,6 +258,19 @@ window.SITE = {
     }
   ],
 
+  /* Сайты садака джария — отдельный блок после работ, перед ботами и Mini Apps.
+     Поля — как у projects (картинки тоже снимает node tools/shots.mjs). */
+  charity: [
+    {
+      slug: 'zufar', folder: 'Зуфар хазрат Тахавиев', live: 'https://zufar-hazrat-tahaviev.ru/',
+      title: 'Зуфар хазрат Тахавиев', type: 'Сайт имама-хатыба', city: 'Татарстан', region: 'russia', sector: 'charity',
+      accent: '#3f8f6b',
+      summary: 'Сайт имама-хатыба, писателя и историка на татарском и русском: проповеди с YouTube и Rutube, книги, путь хазрата. Новое хазрат публикует сам — через свою панель.',
+      features: ['Татарский и русский', 'Проповеди с YouTube и Rutube', 'Книги в PDF', 'Панель для хазрата', 'Без сбора данных'],
+      motifs: []
+    }
+  ],
+
   /* Боты и Telegram Mini Apps — отдельный раздел после сайтов.
      bot    — ник бота без @ (кнопка «Открыть в Telegram»)
      live   — адрес мини-аппа в интернете (кнопка «Открыть в браузере»)
@@ -284,6 +297,10 @@ window.SITE = {
       }
     }
   ],
+
+  /* Посещаемость без cookie: куда сайт шлёт «+1» при открытии. Пусто — не считать.
+     Смотреть статистику — https://saudimade-stats.vercel.app (вход по паролю). */
+  stats: { hit: 'https://saudimade-stats.vercel.app/api/hit' },
 
   filters: [
     { id: 'all',     label: 'Все' },

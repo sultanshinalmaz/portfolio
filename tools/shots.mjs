@@ -38,7 +38,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 /* ---------- список проектов из data.js ---------- */
 const sandbox = { window: {} };
 vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/js/data.js'), 'utf8'), sandbox);
-let projects = sandbox.window.SITE.projects;
+let projects = sandbox.window.SITE.projects.concat(sandbox.window.SITE.charity || []);   // и сайты садака джария
 let apps = sandbox.window.SITE.apps || [];
 const only = process.argv.slice(2);
 if (only.length) {

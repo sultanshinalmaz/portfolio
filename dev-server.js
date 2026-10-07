@@ -22,7 +22,7 @@ function folders() {                       // slug → папка проекта
   const box = { window: {} };
   try { vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/js/data.js'), 'utf8'), box); } catch (e) { return {}; }
   const map = {};
-  (box.window.SITE.projects || []).forEach(p => { map[p.slug] = p.folder; });
+  [...(box.window.SITE.projects || []), ...(box.window.SITE.charity || [])].forEach(p => { map[p.slug] = p.folder; });
   return map;
 }
 
@@ -100,7 +100,7 @@ if (!process.argv.includes('--no-shots')) {
       const f = path.join(ROOT, 'assets', 'img', 'work', `${slug}-long.webp`);
       return fs.existsSync(f) ? fs.statSync(f).mtimeMs : 0;
     };
-    for (const p of box.window.SITE.projects.filter(x => !x.hidden && x.folder)) {
+    for (const p of [...box.window.SITE.projects, ...(box.window.SITE.charity || [])].filter(x => !x.hidden && x.folder)) {
       const dir = path.join(PROJECTS, p.folder);
       if (!fs.existsSync(dir)) continue;
       if (newest(dir) > shotTime(p.slug)) enqueue(p.slug);
