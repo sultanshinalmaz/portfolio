@@ -15,6 +15,9 @@ if (git('status', '--porcelain', '--untracked-files=no')) {
   console.error('Есть несохранённые изменения — сначала git commit, потом публикация.');
   process.exit(1);
 }
+// версии стилей и скриптов в адресах (иначе браузеры 45 дней показывают старые) — свой коммит, если поменялись
+const { changed } = await import('./bump.mjs');
+if (changed) { git('add', 'index.html'); git('commit', '-q', '-m', 'Версии стилей и скриптов в адресах\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'); }
 const last = tryRev(REF);                       // что публиковали отсюда в прошлый раз
 git('fetch', '-q', REMOTE, 'main');
 const tree = git('rev-parse', 'HEAD^{tree}'), parent = git('rev-parse', 'FETCH_HEAD');
