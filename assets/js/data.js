@@ -184,7 +184,7 @@ window.SITE = {
       motifs: ['северное сияние', 'поморская роза ветров', 'колесо ароматов Майкла Эдвардса']
     },
     {
-      slug: 'zahab', folder: 'Сок трюфеля ZAHAB', live: 'https://zahab.vercel.app/',   // на Vercel пока другой, ранний сайт — передеплоить
+      slug: 'zahab', folder: 'Сок трюфеля ZAHAB', live: 'https://zahab-five.vercel.app/',
       title: 'ZAHAB', type: 'Производитель сока кам’а', city: 'Саудовская Аравия', region: 'arabia', sector: 'brand',
       accent: '#d9a441',
       summary: 'Сайт прямого производителя сока пустынного трюфеля. Один товар — и вся история вокруг него: сбор в пустыне, отзывы, наборы и заказ в WhatsApp.',
