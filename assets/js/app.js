@@ -10,7 +10,11 @@
   const $$ = (s, c) => Array.from((c || document).querySelectorAll(s));
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const plural = (n, f) => f[(n % 10 === 1 && n % 100 !== 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 1 : 2];
+  // языки (assets/js/i18n.js): перевод строк и формы слов после чисел; без i18n.js — как раньше, по-русски
+  const tr = window.tr || (s => s);
+  const trf = window.trf || ((t, v) => t.replace(/\{(\w+)\}/g, (m, k) => v[k]));
+  const plural = window.trPlural || ((n, f) => f[(n % 10 === 1 && n % 100 !== 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 1 : 2]);
+  const LOCALE = window.LOCALE || 'ru-RU';
   const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
   const icon = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
   const lowerFirst = s => /^[А-ЯЁ](?![А-ЯЁA-Z])/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
@@ -558,7 +562,7 @@
   /* ==========================================================================
      РАБОТЫ
      ========================================================================== */
-  const COUNTRIES = ['Россия', 'Саудовская Аравия'];
+  const COUNTRIES = ['Россия', 'Саудовская Аравия'].map(tr);
   const cities = new Set(projects.map(p => p.city).filter(c => !COUNTRIES.includes(c)));
   const countries = new Set(projects.map(p => p.region));
   $('#stats').innerHTML = [
@@ -1000,8 +1004,8 @@
   renderCart();
 
   /* --- приложение --- */
-  const WD = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
-  const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  const wd = d => new Intl.DateTimeFormat(LOCALE, { weekday: 'short' }).format(d).replace(/\.$/, '');
+  const dayLong = d => new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric', month: 'long' }).format(d);
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return d; });
   const booking = { svc: 0, day: 0, time: null };
   const ICONS = {
@@ -1015,7 +1019,7 @@
       <p class="ap-h">Услуга</p>
       <div class="ap-seg">${D.app.services.map((s, i) => `<button type="button" data-svc="${i}"${i === 0 ? ' class="is-on"' : ''}>${esc(s.n)}<small>${s.p} SAR</small></button>`).join('')}</div>
       <p class="ap-h">День</p>
-      <div class="ap-days">${days.map((d, i) => `<button type="button" data-day="${i}"${i === 0 ? ' class="is-on"' : ''}><small>${i === 0 ? 'сег' : WD[d.getDay()]}</small><b>${d.getDate()}</b></button>`).join('')}</div>
+      <div class="ap-days">${days.map((d, i) => `<button type="button" data-day="${i}"${i === 0 ? ' class="is-on"' : ''}><small>${i === 0 ? tr('сег') : wd(d)}</small><b>${d.getDate()}</b></button>`).join('')}</div>
       <p class="ap-h">Время</p>
       <div class="ap-times" id="apTimes"></div>
     </div>
@@ -1041,7 +1045,7 @@
   apCta.addEventListener('click', () => {
     if (!booking.time) return;
     const d = days[booking.day], s = D.app.services[booking.svc];
-    const when = `${WD[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} · ${booking.time}`;
+    const when = `${dayLong(d)} · ${booking.time}`;
     $('#apDoneTxt', vApp).textContent = `${when}\n${s.n} · ${s.p} SAR`;
     apDone.classList.add('is-on');
     setTimeout(() => push('✂', D.app.short, `Запись подтверждена: ${when}. Напомним за 2 часа.`), 1100);
@@ -1221,15 +1225,15 @@
   function briefText() {
     const lines = [B.greeting];
     const what = B.what.filter(v => brief.what.has(v)).map(lowerFirst);
-    lines.push(what.length ? `Хочу заказать: ${what.join(', ')}.` : 'Хочу обсудить проект.');
+    lines.push(what.length ? trf('Хочу заказать: {list}.', { list: what.join(tr(', ')) }) : tr('Хочу обсудить проект.'));
     const pr = brief.project && projects.find(p => p.slug === brief.project);
-    if (pr) lines.push(`Понравилась ваша работа «${pr.title}» — хочу похожее.`);
-    if (brief.field) lines.push(`Сфера: ${lowerFirst(brief.field)}.`);
-    if (brief.when) lines.push(`Сроки: ${lowerFirst(brief.when)}.`);
-    if (brief.promo) lines.push('Хочу скидку за видеоотзыв и рекламу в соцсетях.');
-    if (brief.bonuses.length) lines.push('🌴 Собрал(а) финики на сайте — бонусы: ' + brief.bonuses.join('; ') + '.');
-    if (agreed) lines.push('✅ С условиями работы ознакомлен(а)' + (termsLink ? ': ' + termsLink : '.'));
-    lines.push('Пишу с вашего сайта-портфолио.');
+    if (pr) lines.push(trf('Понравилась ваша работа «{title}» — хочу похожее.', { title: pr.title }));
+    if (brief.field) lines.push(trf('Сфера: {v}.', { v: lowerFirst(brief.field) }));
+    if (brief.when) lines.push(trf('Сроки: {v}.', { v: lowerFirst(brief.when) }));
+    if (brief.promo) lines.push(tr('Хочу скидку за видеоотзыв и рекламу в соцсетях.'));
+    if (brief.bonuses.length) lines.push(trf('🌴 Собрал(а) финики на сайте — бонусы: {list}.', { list: brief.bonuses.join(tr('; ')) }));
+    if (agreed) lines.push(tr('✅ С условиями работы ознакомлен(а)') + (termsLink ? ': ' + termsLink : '.'));
+    lines.push(tr('Пишу с вашего сайта-портфолио.'));
     return lines.join('\n');
   }
   // ссылка на PDF с условиями — только когда сайт в интернете (с компьютера адрес никому не откроется)
@@ -1249,7 +1253,7 @@
   }
   // «Хочу похожий» в окне работы и «Обсудить бота» в демо ведут сюда же — через проверку
   function briefPrefill(o) {
-    if (o.what) brief.what = new Set([o.what]);
+    if (o.what) { const ru = ((window.SITE_RU || S).brief || B).what, i = ru.indexOf(o.what); brief.what = new Set([i >= 0 ? B.what[i] : o.what]); }
     if ('project' in o) brief.project = o.project;
     if ('promo' in o) brief.promo = !!o.promo;
     if (o.bonuses) brief.bonuses = o.bonuses;

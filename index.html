@@ -9,6 +9,10 @@
 <meta property="og:title" content="SAUDI MADE — сайты, приложения и Telegram-боты из Медины">
 <meta property="og:description" content="Сайты, мобильные приложения, Telegram-боты и мини-аппы. Сделано в Медине.">
 <meta property="og:type" content="website">
+<link rel="alternate" hreflang="ru" href="https://sultaninmadinah.tech/?lang=ru">
+<link rel="alternate" hreflang="en" href="https://sultaninmadinah.tech/?lang=en">
+<link rel="alternate" hreflang="ar" href="https://sultaninmadinah.tech/?lang=ar">
+<link rel="alternate" hreflang="x-default" href="https://sultaninmadinah.tech/">
 <link rel="icon" href="assets/img/logo/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="assets/img/logo/favicon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="assets/img/logo/apple-touch-icon.png">
@@ -19,6 +23,8 @@
 
 <!-- Контент нужен уже здесь: по нему решается, играть ли заставку -->
 <script src="assets/js/data.js?v=d36a472d"></script>
+<!-- Языки: русский, английский, арабский (справа налево) — см. assets/js/i18n.js -->
+<script src="assets/js/i18n.js?v=1483cef8"></script>
 <script src="assets/js/guard.js?v=870faf7f"></script>
 <script>
   /* Заставка: решаем до первой отрисовки, чтобы не было вспышки сайта.
@@ -45,6 +51,8 @@
     } catch (e) {}
     try {
       if (/[?&]nointro\b/.test(location.search)) play = false;
+      // сменили язык — та же страница на другом языке, заставку второй раз не показываем
+      if (sessionStorage.getItem('sm-skip-intro')) { sessionStorage.removeItem('sm-skip-intro'); play = false; }
       if (rm) play = false;
       var every = !(window.SITE && SITE.intro && SITE.intro.everyVisit === false);
       if (!every && sessionStorage.getItem('introSeen')) play = false;
@@ -129,7 +137,7 @@
 </style>
 
 <link rel="stylesheet" href="assets/css/fonts.css?v=a4c8605c">
-<link rel="stylesheet" href="assets/css/style.css?v=19ac67d0">
+<link rel="stylesheet" href="assets/css/style.css?v=50ff6119">
 <link rel="stylesheet" href="assets/css/day.css?v=3b093094">
 </head>
 <body>
@@ -565,8 +573,9 @@
   </div>
 </div>
 
+<script>window.i18nApplyDom && i18nApplyDom();</script>
 <script src="assets/js/scene.js?v=9e1f5ed4"></script>
 <script src="assets/js/intro.js?v=b23183e4"></script>
-<script src="assets/js/app.js?v=7e6b8fc3"></script>
+<script src="assets/js/app.js?v=bef9af52"></script>
 </body>
 </html>

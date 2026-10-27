@@ -1141,3 +1141,42 @@ html.rm .route::before{clip-path:none!important;transition:none}
 html.rm .sec-head>.sec-ar,html.rm .hero__ar{clip-path:none!important}
 html.rm .num{transition:none}
 html.rm.js .rise{opacity:1;transform:none;transition:none}
+
+/* ==========================================================================
+   ЯЗЫКИ — переключатель в шапке (assets/js/i18n.js) и строка в меню
+   ========================================================================== */
+.lang{position:relative;flex:none}
+.lang__seg{display:none}
+.lang__btn{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 12px;border-radius:99px;cursor:pointer;color:inherit;
+  border:1px solid rgba(239,233,220,.22);background:rgba(255,255,255,.05);font:700 13px/1 var(--f-display);-webkit-tap-highlight-color:transparent}
+.lang__btn svg,.menu__lang svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6}
+.lang__list{position:absolute;top:calc(100% + 8px);inset-inline-end:0;z-index:60;margin:0;padding:6px;list-style:none;min-width:170px;
+  border-radius:14px;background:rgba(6,11,24,.96);border:1px solid rgba(228,180,94,.35);box-shadow:0 14px 34px -12px rgba(0,0,0,.6)}
+.lang__list a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;color:#efe9dc;text-decoration:none;font:600 15px/1.2 var(--f-display)}
+.lang__list a i{min-width:22px;font:700 12px/1 var(--f-mono);font-style:normal;color:var(--gold)}
+.lang__list a[aria-current],.lang__list a:hover{background:rgba(228,180,94,.16)}
+@media (min-width:1080px){
+  .lang__btn,.lang__list{display:none!important}
+  .lang__seg{display:inline-flex;gap:2px;padding:3px;border-radius:99px;border:1px solid rgba(239,233,220,.22);background:rgba(255,255,255,.05)}
+  .lang__opt{display:grid;place-items:center;min-width:34px;height:30px;padding:0 8px;border-radius:99px;color:inherit;text-decoration:none;
+    font:700 12.5px/1 var(--f-display);opacity:.72;transition:background .2s,opacity .2s}
+  .lang__opt[lang="ar"]{font:700 16px/1 "El Messiri",var(--f-ar)}
+  .lang__opt:hover{opacity:1}
+  .lang__opt.is-on{opacity:1;background:var(--gold);color:#1a1205}
+}
+html[data-theme="day"] .lang__btn,html[data-theme="day"] .lang__seg{border-color:rgba(21,32,58,.2);background:rgba(255,255,255,.55)}
+.menu__lang{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+.menu__lang a{padding:9px 14px;border-radius:99px;border:1px solid rgba(239,233,220,.2);color:inherit;text-decoration:none;font:600 14px/1 var(--f-display)}
+.menu__lang a[aria-current]{background:var(--gold);border-color:var(--gold);color:#1a1205}
+
+/* арабский: шрифт El Messiri (арабский в нём полный), лишние арабские подписи-дубли прячем */
+html.lang-ar{--f-body:"El Messiri","Manrope",system-ui,sans-serif}
+html.lang-ar .sec-label i[lang="ar"],html.lang-ar .menu__nav i[lang="ar"],html.lang-ar .hero__kicker i[lang="ar"]{display:none}
+html.lang-ar .board__word i{font-family:var(--f-display)}
+/* узкий телефон: шапка не вмещает всё — язык кружком с кодом, Telegram-кнопка остаётся в меню */
+@media (max-width:479px){
+  .header__side{gap:6px}
+  .lang__btn{width:44px;padding:0;justify-content:center}
+  .lang__btn svg{display:none}
+}
+@media (max-width:479px){ .header__cta{display:none} }
