@@ -1105,7 +1105,6 @@
         ${r.points && r.points.length ? `<ul class="rv__pts">${r.points.map(p => `<li>${icon('i-check')}${esc(p)}</li>`).join('')}</ul>` : ''}
         <blockquote>${rich(r.text)}</blockquote>
         <p class="rv__who"><b>${esc(r.author)}</b><span>${esc(r.project)}</span></p>
-        ${r.transcript ? `<details class="rv__tx"${tall(r) && window.innerWidth >= 860 ? " open" : ""}><summary>Расшифровка видео</summary><p>${esc(r.transcript)}</p></details>` : ''}
       </figcaption>
     </figure>` : `
     <figure class="rv__card rise${r.sample ? ' is-sample' : ''}">
@@ -1125,18 +1124,39 @@
     v.play().catch(() => { v.controls = true; });   // не дал автозапуск — останутся кнопки плеера
   });
 
-  /* Лента отзывов едет сама — медленно, ~28 px в секунду. Стоит, пока посетитель её трогает
-     (палец, мышь, стрелки — ещё 6 с после), пока идёт видео, пока лента не на экране.
-     Доехала до конца — пауза и плавно в начало. «Меньше движения» — не едет, только стрелки и палец. */
+  /* Лента отзывов — бесконечная: карточки повторены по кругу, едет сама медленно (~28 px/с).
+     Доехала до конца первого набора — незаметно перескакивает на такое же место в начале.
+     Стоит под мышью, после касания/стрелок 6 с, пока идёт видео, пока лента не на экране.
+     «Меньше движения» — не едет сама, только стрелки и палец. */
   (() => {
     const track = $('#rvGrid'), nav = $('#rvNav');
-    if (!track) return;
+    if (!track || !track.children.length) return;
     const SPEED = 28;
-    let pos = track.scrollLeft, last = 0, holdUntil = 0, hover = false, playing = 0, visible = false, endAt = 0;
+    const originals = [...track.children];
+    let loopW = 0, pos = 0, last = 0, holdUntil = 0, hover = false, playing = 0, visible = false;
+    // копии: кнопки работают (видео по нажатию), но не в порядке Tab и скрыты от читалок
+    const addSet = () => originals.forEach(el => {
+      const c = el.cloneNode(true);
+      c.removeAttribute('id'); c.setAttribute('aria-hidden', 'true'); c.classList.add('is-in', 'rv__card--copy');
+      c.querySelectorAll('button, a, [tabindex]').forEach(x => x.setAttribute('tabindex', '-1'));
+      track.appendChild(c);
+    });
+    const measure = () => {
+      const gap = parseFloat(getComputedStyle(track).columnGap) || 16;
+      const first = originals[0], lastEl = originals[originals.length - 1];
+      loopW = lastEl.offsetLeft + lastEl.offsetWidth + gap - first.offsetLeft;
+      while (track.scrollWidth - track.clientWidth < loopW + 4) addSet();   // хватает копий, чтобы шов был всегда за краем
+    };
+    const wrap = () => {   // держим прокрутку в пределах первого круга
+      if (!loopW) return;
+      if (track.scrollLeft >= loopW) track.scrollLeft -= loopW;
+      pos = track.scrollLeft;
+    };
+    measure();
+    addEventListener('resize', () => { measure(); wrap(); });
+    if (nav) nav.hidden = false;
     const hold = ms => { holdUntil = performance.now() + ms; pos = track.scrollLeft; };
-    const room = () => track.scrollWidth - track.clientWidth;
-    const fitNav = () => { if (nav) nav.hidden = room() < 8; };
-    fitNav(); addEventListener('resize', fitNav);
+    track.addEventListener('scroll', () => { if (track.scrollLeft >= loopW) wrap(); }, { passive: true });
     track.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') hover = true; });
     track.addEventListener('pointerleave', () => { hover = false; hold(1500); });
     track.addEventListener('pointerdown', () => hold(6000));
@@ -1147,11 +1167,11 @@
     ['pause', 'ended'].forEach(t => track.addEventListener(t, () => { playing = Math.max(0, playing - 1); hold(4000); }, true));
     if (nav) nav.addEventListener('click', e => {
       const b = e.target.closest('[data-dir]'); if (!b) return;
-      const card = track.querySelector('.rv__card');
-      const step = card ? card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap || 16) : track.clientWidth * .8;
-      const to = Math.max(0, Math.min(room(), track.scrollLeft + step * +b.dataset.dir));
+      const dir = +b.dataset.dir;
+      const step = originals[0].offsetWidth + (parseFloat(getComputedStyle(track).columnGap) || 16);
+      if (dir < 0 && track.scrollLeft < step) track.scrollLeft += loopW;   // назад от начала — с того же места второго круга
       hold(6000);
-      track.scrollTo({ left: to, behavior: window.reduceMotion ? 'auto' : 'smooth' });
+      track.scrollBy({ left: step * dir, behavior: window.reduceMotion ? 'auto' : 'smooth' });
     });
     addEventListener('hashchange', () => { if (/^#rv-/.test(location.hash)) hold(15000); });   // пришли «Видеоотзыв клиента» с карточки мини-аппа
     if (/^#rv-/.test(location.hash)) hold(15000);
@@ -1159,15 +1179,11 @@
     new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(track);
     const tick = now => {
       const dt = Math.min(100, now - (last || now)); last = now;
-      if (visible && !hover && !playing && now > holdUntil && room() > 8) {
+      if (visible && !hover && !playing && now > holdUntil && loopW) {
         if (Math.abs(track.scrollLeft - pos) > 3) pos = track.scrollLeft;   // посетитель листнул сам
-        if (pos >= room() - 1) {
-          if (!endAt) endAt = now;
-          else if (now - endAt > 2500) { endAt = 0; track.scrollTo({ left: 0, behavior: 'smooth' }); hold(1800); pos = 0; }
-        } else {
-          pos = Math.min(room(), pos + SPEED * dt / 1000);
-          track.scrollLeft = pos;
-        }
+        pos += SPEED * dt / 1000;
+        if (pos >= loopW) pos -= loopW;
+        track.scrollLeft = pos;
       }
       requestAnimationFrame(tick);
     };

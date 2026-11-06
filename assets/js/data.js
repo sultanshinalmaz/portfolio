@@ -288,10 +288,13 @@ window.SITE = {
       features: ['Меню с фото и ценами', 'Доставка, самовывоз, заказ к столу', 'QR-таблички на столы', 'Шкала до бесплатной доставки', 'Статус заказа и отзывы', 'Заказы в группу кафе', 'Админка в Telegram: меню, «нет в наличии», выручка', 'RU · UZ · EN · AR'],
       shots: {
         screens: [
-          { name: 'video', caption: 'Видео при открытии' },
+          // emblem, stats, admin — сняты отдельно (заставка; админка с вымышленными заказами), shots.mjs их не трогает
+          { name: 'emblem', manual: true, caption: 'Заставка' },
           { name: 'home', taps: ['Меню', 'Русский'], caption: 'Главная' },
           { name: 'dine', tab: 'Заказ в кафе', caption: 'Заказ к столу' },
-          { name: 'cart', taps: ['Заказ в кафе', '16 SAR', '10 SAR', '24 SAR', 'До бесплатной'], caption: 'Корзина' }
+          { name: 'cart', taps: ['Заказ в кафе', '16 SAR', '10 SAR', '24 SAR', 'До бесплатной'], caption: 'Корзина' },
+          { name: 'stats', manual: true, caption: 'Статистика' },
+          { name: 'admin', manual: true, caption: 'Админка: меню' }
         ]
       }
     },

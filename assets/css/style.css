@@ -691,8 +691,8 @@ html.is-skipped .scene--hero *{animation:none!important;transition:none!importan
   direction:ltr;padding:6px 2px 30px;margin:-6px -2px 0}
 .rv::-webkit-scrollbar{display:none}
 html[dir=rtl] .rv>*{direction:rtl}
-.rv>.rv__card{flex:0 0 min(86vw,340px)}
-.rv>.rv__card--video{flex-basis:min(86vw,720px)}
+.rv{align-items:stretch}
+.rv>.rv__card{flex:0 0 min(82vw,340px)}   /* все карточки одного размера: видео сверху, текст снизу */
 @media (min-width:760px){ .rv{gap:20px} }
 .rv__nav{display:flex;justify-content:center;gap:12px;margin:0 0 8px;direction:ltr}
 .rv__arr{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;border:1.5px solid rgba(154,111,34,.4);background:#fff;cursor:pointer;
@@ -752,6 +752,14 @@ html[dir=rtl] .rv>*{direction:rtl}
   .rv__card--tall .rv__player{width:min(330px,calc(78vh * var(--ar,9/16)));width:min(330px,calc(78svh * var(--ar,9/16)))}
   .rv__side{padding:8px 8px 0 0}
 }
+/* в ленте все видеокарточки одинаковые: обложка 4:5 сверху, текст снизу (перекрывает раскладку «видео + текст рядом») */
+.rv .rv__card--video,.rv .rv__card--tall{display:flex;flex-direction:column;gap:16px;padding:14px 14px 20px}
+.rv .rv__card--video .rv__player{width:100%;aspect-ratio:1;margin:0}
+.rv .rv__play,.rv .rv__play img{height:100%}
+.rv .rv__play img{aspect-ratio:auto}
+.rv .rv__video{height:100%;aspect-ratio:auto;object-fit:contain}
+.rv .rv__side{padding:0 6px}
+.rv .rv__side blockquote,.rv .rv__card--tall .rv__side blockquote{font-size:16px;line-height:1.6}
 .rv__card{position:relative;display:flex;flex-direction:column;gap:14px;margin:0;padding:26px 22px 22px;border-radius:22px;background:#fff;
   box-shadow:0 1px 0 rgba(12,19,38,.05),0 22px 44px -32px rgba(12,19,38,.4)}
 .rv__card.is-sample{background:rgba(255,255,255,.6);border:1.5px dashed rgba(154,111,34,.35);box-shadow:none}

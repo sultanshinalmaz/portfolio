@@ -220,6 +220,7 @@ async function shootApp(app) {
     await sleep(5000);
     for (const t of (app.shots.prepare || [])) { await tapText(t); await sleep(1800); }
     for (const sc of app.shots.screens) {
+      if (sc.manual) continue;   // снят вручную — не перезаписывать
       if (sc.tab) { await tapText(sc.tab); await sleep(2200); }
       for (const t of (sc.taps || [])) { await tapText(t); await sleep(1500); }   // несколько нажатий подряд (корзина: добавить блюда → открыть)
       await ev('document.querySelectorAll("*").forEach(e => { if (e.scrollTop) e.scrollTop = 0 })');
