@@ -686,8 +686,21 @@ html.is-skipped .scene--hero *{animation:none!important;transition:none!importan
 /* ==========================================================================
    ОТЗЫВЫ
    ========================================================================== */
-.rv{display:grid;grid-template-columns:1fr;gap:16px}
-@media (min-width:760px){ .rv{grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:20px} }
+/* лента: карточки в ряд, едет медленно сама; отзывов много — в столбик страница вышла бы огромной */
+.rv{display:flex;align-items:flex-start;gap:16px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;
+  direction:ltr;padding:6px 2px 30px;margin:-6px -2px 0}
+.rv::-webkit-scrollbar{display:none}
+html[dir=rtl] .rv>*{direction:rtl}
+.rv>.rv__card{flex:0 0 min(86vw,340px)}
+.rv>.rv__card--video{flex-basis:min(86vw,720px)}
+@media (min-width:760px){ .rv{gap:20px} }
+.rv__nav{display:flex;justify-content:center;gap:12px;margin:0 0 8px;direction:ltr}
+.rv__arr{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;border:1.5px solid rgba(154,111,34,.4);background:#fff;cursor:pointer;
+  color:#9a6f22;transition:background .2s,transform .2s}
+.rv__arr svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.rv__arr:active{transform:scale(.94)}
+@media (hover:hover){ .rv__arr:hover{background:#fbf3e2} }
+.rv__nav[hidden]{display:none}
 
 /* видеоотзыв: обложка с кнопкой, видео грузится только по нажатию */
 .rv .rv__card--video{grid-column:1/-1;display:grid;gap:22px;padding:18px}

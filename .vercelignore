@@ -1,6 +1,7 @@
 # На сайт в интернете уходят только index.html и assets/.
 # Инструменты, бот, локальный сервер, описания и исходники — остаются в репозитории.
 README.md
+CLAUDE.md
 dev-server.js
 tools/
 telegram/

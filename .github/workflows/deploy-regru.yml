@@ -29,6 +29,7 @@ jobs:
             **/node_modules/**
             .github/**
             README.md
+            CLAUDE.md
             dev-server.js
             vercel.json
             .vercelignore

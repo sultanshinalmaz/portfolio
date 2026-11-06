@@ -221,6 +221,7 @@ async function shootApp(app) {
     for (const t of (app.shots.prepare || [])) { await tapText(t); await sleep(1800); }
     for (const sc of app.shots.screens) {
       if (sc.tab) { await tapText(sc.tab); await sleep(2200); }
+      for (const t of (sc.taps || [])) { await tapText(t); await sleep(1500); }   // несколько нажатий подряд (корзина: добавить блюда → открыть)
       await ev('document.querySelectorAll("*").forEach(e => { if (e.scrollTop) e.scrollTop = 0 })');
       await sleep(600);
       const shot = await send('Page.captureScreenshot', {

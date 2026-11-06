@@ -40,6 +40,8 @@ i18nLoad({
   ui: {
     // заставка, шапка, меню
     'Пропустить': 'Skip',
+    'Предыдущий отзыв': 'Previous review',
+    'Следующий отзыв': 'Next review',
     'SAUDI MADE — на главную': 'SAUDI MADE — home',
     'Разделы': 'Sections',
     'Работы': 'Projects',
@@ -281,6 +283,7 @@ i18nLoad({
       { slug: 'zufar', title: 'Zufar Hazrat Takhaviev', type: 'Website of an imam-khatib', city: 'Tatarstan', summary: 'Website of an imam-khatib, writer and historian, in Tatar and Russian: sermons from YouTube and Rutube, books, the hazrat’s life path. The hazrat publishes new material himself through his own panel.', features: ['Tatar and Russian', 'Sermons from YouTube and Rutube', 'Books in PDF', 'A panel for the hazrat', 'No data collection'] }
     ],
     apps: [
+      { slug: 'samarkand', title: 'Samarkand', type: 'Telegram Mini App + bot', city: 'Medina', summary: 'A mini app for a halal Uzbek café in Medina, taking real orders. A guest opens the menu with a button in Telegram or a QR code on the table: plov, lagman and samsa with photos and prices in four languages. The order can be for delivery, pickup or straight to their table in the hall — it lands in the café’s Telegram group at once, and the guest watches the status change: accepted, cooking, served. The owner edits the menu, prices and photos in an admin panel inside Telegram.', features: ['Menu with photos and prices', 'Delivery, pickup, order to the table', 'QR plates on the tables', 'Progress bar to free delivery', 'Order status & reviews', 'Orders to the café group', 'Admin in Telegram: menu, “out of stock”, revenue', 'RU · UZ · EN · AR'], shots: { screens: [{ caption: 'Video on opening' }, { caption: 'Home' }, { caption: 'Order to the table' }, { caption: 'Cart' }] } },
       { slug: 'madinah', type: 'Telegram Mini App + bot', city: 'Medina', summary: 'A mini app for a real-estate agent in Medina. A pilgrim opens it with a button in Telegram and instantly sees apartments on a map, visas, tours to the holy sites, car rental and airport transfers. Requests go to the agent’s bot; the agent has a panel, a deals report and PDFs for apartment owners.', features: ['Apartments: list, map, favourites', 'Visas & iqama — 15 types', 'Tours & ziyarat', 'Cars & transfers', 'Requests to the bot', 'Agent panel & report', 'RU · UZ · EN'], shots: { screens: [{ caption: 'Apartments' }, { caption: 'Visas' }, { caption: 'Tours' }, { caption: 'Cars' }] } }
     ],
     filters: [
