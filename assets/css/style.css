@@ -971,7 +971,27 @@ html.rm .dates-got__list li{animation:none}
 .app-card::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
   background:radial-gradient(circle at 1px 1px,rgba(255,255,255,.08) 1px,transparent 1.6px) 0 0/16px 16px;
   -webkit-mask-image:linear-gradient(180deg,#000,transparent 60%);mask-image:linear-gradient(180deg,#000,transparent 60%)}
-.app-phones{position:relative;display:flex;justify-content:center;align-items:flex-end;padding:10px 0 34px}
+/* снизу место под самый опущенный крайний телефон и его подпись: чем больше экранов, тем ниже края веера */
+.app-phones{--cm:calc((var(--n,4) - 1) / 2);position:relative;display:flex;justify-content:center;align-items:flex-end;
+  padding:10px 0 calc(46px + var(--cm) * var(--cm) * 9px + var(--cm) * 7px)}
+.app-ph{cursor:zoom-in}
+.app-ph:focus-visible{outline:2px solid var(--gold);outline-offset:6px;border-radius:30px}
+/* крупный просмотр экрана */
+.zoom{width:100vw;height:100vh;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:transparent;color:#fff;overflow:hidden}
+.zoom[open]{display:grid;place-items:center}
+.zoom::backdrop{background:rgba(6,10,20,.88);backdrop-filter:blur(6px)}
+.zoom__fig{margin:0;display:flex;flex-direction:column;align-items:center;gap:12px}
+.zoom__img{display:block;height:min(84vh,1266px);height:min(84dvh,1266px);width:auto;max-width:calc(100vw - 32px);object-fit:contain;
+  border-radius:26px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);background:#fff;cursor:zoom-out}
+.zoom__cap{font:700 14px/1 var(--f-display);color:rgba(255,255,255,.85);white-space:pre}
+.zoom__btn{position:absolute;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.1);color:#fff;cursor:pointer}
+.zoom__btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.zoom__close{top:16px;right:16px}
+.zoom__prev{left:max(16px,calc(50% - 330px));top:50%;transform:translateY(-50%)}
+.zoom__next{right:max(16px,calc(50% - 330px));top:50%;transform:translateY(-50%)}
+@media (hover:hover){ .zoom__btn:hover{background:rgba(255,255,255,.2)} }
+@media (max-width:600px){ .zoom__prev,.zoom__next{top:auto;bottom:14px;transform:none} .zoom__img{height:min(78vh,1266px);height:min(78dvh,1266px)} .zoom__fig{margin-bottom:40px} }
 .app-ph{--c:calc(var(--i) - (var(--n) - 1) / 2);position:relative;flex:none;width:clamp(150px,16vw,206px);margin:0 -10px;
   transform:translateY(calc(var(--c) * var(--c) * 9px)) rotate(calc(var(--c) * 3.2deg));
   transition:transform .5s cubic-bezier(.2,.7,.2,1)}
@@ -995,7 +1015,7 @@ html.rm .dates-got__list li{animation:none}
 @media (min-width:760px){ .app-nav{display:none} }
 @media (max-width:759px){
   /* экраны по одному: каждый во всю ширину, телефон по центру, соседний не выглядывает */
-  .app-phones{justify-content:flex-start;gap:0;margin:0 -16px;padding:8px 0 40px;overflow-x:auto;overscroll-behavior-x:contain;
+  .app-phones{justify-content:flex-start;gap:0;margin:0 -16px;padding:8px 0 40px!important;overflow-x:auto;overscroll-behavior-x:contain;
     scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .app-phones::-webkit-scrollbar{display:none}
   .app-ph{flex:0 0 100%;width:100%;margin:0;transform:none;scroll-snap-align:center;scroll-snap-stop:always;

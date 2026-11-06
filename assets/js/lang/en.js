@@ -97,6 +97,7 @@ i18nLoad({
 
     // окно работы
     'Закрыть': 'Close',
+    'Увеличить экран': 'Enlarge screen',
     'Сайт на телефоне — можно листать': 'The website on a phone — you can scroll it',
     '↕ Листайте экран телефона — это настоящая мобильная версия': '↕ Scroll the phone screen — this is the real mobile version',
     'Что сделано': 'What was done',

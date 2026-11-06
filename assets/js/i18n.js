@@ -21,8 +21,8 @@
   var LOCALES = { ru: 'ru-RU', en: 'en-GB', ar: 'ar-u-nu-latn' };
   // пути с версиями — их обновляет tools/bump.mjs
   var FILES = {
-    en: 'assets/js/lang/en.js?v=a50e5b9b',
-    ar: 'assets/js/lang/ar.js?v=34d0e021'
+    en: 'assets/js/lang/en.js?v=a9f8801f',
+    ar: 'assets/js/lang/ar.js?v=66d63756'
   };
   var d = document.documentElement;
 

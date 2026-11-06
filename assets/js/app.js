@@ -786,9 +786,9 @@
       const bot = ap.bot ? 'https://t.me/' + ap.bot : '';
       return `
       <article class="app-card rise" style="--accent:${esc(ap.accent || '#2fa36f')}">
-        <div class="app-phones" aria-label="Экраны мини-аппа ${esc(ap.title)}">
+        <div class="app-phones" style="--n:${screens.length}" aria-label="Экраны мини-аппа ${esc(ap.title)}">
           ${screens.map((sc, i) => `
-          <figure class="app-ph" style="--i:${i};--n:${screens.length}">
+          <figure class="app-ph" style="--i:${i};--n:${screens.length}" role="button" tabindex="0" aria-label="Увеличить экран" data-zoom="${esc(ap.slug)}:${i}">
             <span class="phone"><span class="phone__screen">
               <span class="app-tg"><b>✕ Закрыть</b><i>${esc(ap.title)}</i><b>···</b></span>
               <img src="assets/img/work/${esc(ap.slug)}-${esc(sc.name)}.webp" alt="${esc(ap.title)}: ${esc(sc.caption || sc.name)}" width="585" height="1266" loading="lazy" decoding="async">
@@ -844,6 +844,49 @@
         else if (e.target.closest('.app-nav__btn--next')) go(cur + 1);
       });
       mark();
+    });
+
+    /* нажали на экран — открывается крупно; стрелки и ← → листают экраны этого мини-аппа, Esc или нажатие по фону — закрыть */
+    const zoom = document.createElement('dialog');
+    zoom.className = 'zoom';
+    zoom.innerHTML = '<figure class="zoom__fig"><img class="zoom__img" alt=""><figcaption class="zoom__cap"></figcaption></figure>' +
+      '<button class="zoom__btn zoom__close" type="button" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+      '<button class="zoom__btn zoom__prev" type="button" aria-label="Предыдущий экран"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>' +
+      '<button class="zoom__btn zoom__next" type="button" aria-label="Следующий экран"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>';
+    document.body.appendChild(zoom);
+    let zApp = null, zI = 0;
+    const zShow = i => {
+      const list = zApp.shots.screens;
+      zI = (i + list.length) % list.length;
+      const sc = list[zI];
+      $('.zoom__img', zoom).src = 'assets/img/work/' + zApp.slug + '-' + sc.name + '.webp';
+      $('.zoom__img', zoom).alt = zApp.title + ': ' + (sc.caption || sc.name);
+      $('.zoom__cap', zoom).textContent = (sc.caption || '') + '  ·  ' + (zI + 1) + ' / ' + list.length;
+    };
+    const zOpen = el => {
+      const [slug, i] = el.dataset.zoom.split(':');
+      zApp = S.apps.find(a => a.slug === slug); if (!zApp) return;
+      zShow(+i);
+      zoom.showModal();
+    };
+    appsList.addEventListener('click', e => { const f = e.target.closest('[data-zoom]'); if (f) zOpen(f); });
+    appsList.addEventListener('keydown', e => { const f = e.target.closest('[data-zoom]'); if (f && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); zOpen(f); } });
+    zoom.addEventListener('click', e => {
+      if (e.target.closest('.zoom__prev')) zShow(zI - 1);
+      else if (e.target.closest('.zoom__next')) zShow(zI + 1);
+      else if (e.target.closest('.zoom__close') || !e.target.closest('.zoom__img')) zoom.close();
+    });
+    zoom.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') zShow(zI + (document.dir === 'rtl' ? 1 : -1));
+      if (e.key === 'ArrowRight') zShow(zI + (document.dir === 'rtl' ? -1 : 1));
+    });
+    // на телефоне — листать свайпом
+    let zx = null;
+    zoom.addEventListener('touchstart', e => { zx = e.touches[0].clientX; }, { passive: true });
+    zoom.addEventListener('touchend', e => {
+      if (zx == null) return;
+      const dx = e.changedTouches[0].clientX - zx; zx = null;
+      if (Math.abs(dx) > 50) zShow(zI + (dx < 0 ? 1 : -1));
     });
   }
 
