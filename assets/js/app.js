@@ -1164,6 +1164,7 @@
     box.innerHTML = `<video class="rv__video" controls controlslist="nodownload noplaybackrate" disablepictureinpicture playsinline autoplay preload="auto" poster="${esc(r.poster)}"
       src="${esc(r.video)}"${r.transcript ? ` aria-label="Видеоотзыв: ${esc(r.author)}"` : ''}></video>`;
     const v = $('.rv__video', box);
+    box.classList.add('is-playing');
     v.play().catch(() => { v.controls = true; });   // не дал автозапуск — останутся кнопки плеера
   });
 

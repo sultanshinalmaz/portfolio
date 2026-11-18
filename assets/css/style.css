@@ -758,6 +758,8 @@ html[dir=rtl] .rv>*{direction:rtl}
 .rv .rv__play,.rv .rv__play img{height:100%}
 .rv .rv__play img{aspect-ratio:auto}
 .rv .rv__video{height:100%;aspect-ratio:auto;object-fit:contain}
+/* видео запущено — окно по пропорциям ролика, но не выше 72% экрана */
+.rv .rv__card--video .rv__player.is-playing{aspect-ratio:var(--ar,16/9);max-height:72vh;max-height:72svh;background:#000}
 .rv .rv__side{padding:0 6px}
 .rv .rv__side blockquote,.rv .rv__card--tall .rv__side blockquote{font-size:16px;line-height:1.6}
 .rv__card{position:relative;display:flex;flex-direction:column;gap:14px;margin:0;padding:26px 22px 22px;border-radius:22px;background:#fff;
