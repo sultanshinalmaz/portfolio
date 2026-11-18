@@ -21,8 +21,8 @@
   var LOCALES = { ru: 'ru-RU', en: 'en-GB', ar: 'ar-u-nu-latn' };
   // пути с версиями — их обновляет tools/bump.mjs
   var FILES = {
-    en: 'assets/js/lang/en.js?v=a9f8801f',
-    ar: 'assets/js/lang/ar.js?v=66d63756'
+    en: 'assets/js/lang/en.js?v=86033b15',
+    ar: 'assets/js/lang/ar.js?v=ace8e039'
   };
   var d = document.documentElement;
 
@@ -142,7 +142,8 @@
     q.push('lang=' + l);
     location.href = location.pathname + '?' + q.join('&');
   }
-  var GLOBE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9M12 3c-2.6 2.5-4 5.6-4 9s1.4 6.5 4 9"/></svg>';
+  // значок «перевод» (文A), как у Google; заказчик: вместо RU · EN · ع — один значок и выпадающий список (18.11.2026)
+  var GLOBE = '<svg class="lang__ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>';
   function switcher() {
     var side = document.querySelector('.header__side');
     var label = 'Язык · Language · اللغة';
@@ -150,14 +151,11 @@
       var box = document.createElement('div');
       box.className = 'lang'; box.id = 'lang'; box.setAttribute('data-noi18n', '');
       box.innerHTML =
-        '<div class="lang__seg" role="group" aria-label="' + label + '">' + LANGS.map(function (l) {
-          return '<a class="lang__opt' + (l === lang ? ' is-on' : '') + '" href="?lang=' + l + '" hreflang="' + l + '" lang="' + l + '" data-lang="' + l + '"' +
-            (l === lang ? ' aria-current="true"' : '') + ' title="' + NAMES[l] + '">' + CODES[l] + '</a>';
-        }).join('') + '</div>' +
         '<button class="lang__btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="' + label + '">' + GLOBE + '<b>' + CODES[lang] + '</b></button>' +
         '<ul class="lang__list" hidden>' + LANGS.map(function (l) {
-          return '<li><a href="?lang=' + l + '" hreflang="' + l + '" lang="' + l + '" dir="' + (l === 'ar' ? 'rtl' : 'ltr') + '" data-lang="' + l + '"' +
-            (l === lang ? ' aria-current="true"' : '') + '><i>' + CODES[l] + '</i>' + NAMES[l] + '</a></li>';
+          // как у Google: только названия, выбранный — с галочкой
+          return '<li><a href="?lang=' + l + '" hreflang="' + l + '" lang="' + l + '" data-lang="' + l + '"' +
+            (l === lang ? ' aria-current="true"' : '') + '>' + NAMES[l] + '</a></li>';
         }).join('') + '</ul>';
       side.insertBefore(box, side.firstChild);
       var btn = box.querySelector('.lang__btn'), list = box.querySelector('.lang__list');
